@@ -12,6 +12,11 @@ for (const envVar of requiredEnvVars) {
   }
 }
 
+// Redis configuration
+const redisHost = process.env['REDIS_HOST'] || 'localhost';
+const redisPort = Number.parseInt(process.env['REDIS_PORT'] || '6379', 10);
+const redisPassword = process.env['REDIS_PASSWORD'] || undefined;
+
 // Validate ChromaDB configuration
 const chromadbHost = process.env['CHROMADB_HOST'] || 'localhost';
 const chromadbPort = Number.parseInt(process.env['CHROMADB_PORT'] || '8000', 10);
@@ -33,6 +38,11 @@ const config: Config = {
     expire: process.env['JWT_EXPIRE'] || '7d'
   },
   redisUrl: process.env['REDIS_URL']!,
+  redis: {
+    host: redisHost,
+    port: redisPort,
+    ...(redisPassword && { password: redisPassword })
+  },
   chromadbHost,
   chromadbPort,
   llm: {

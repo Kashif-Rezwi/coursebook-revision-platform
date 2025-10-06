@@ -43,8 +43,10 @@ app.get('/health', (_req, res) => {
 
 // API Routes
 import authRoutes from './routes/authRoutes';
+import jobRoutes from './routes/jobRoutes';
 
 app.use('/api/auth', authRoutes);
+app.use('/api', jobRoutes);
 
 // 404 handler
 app.use(notFound);

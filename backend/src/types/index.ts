@@ -10,6 +10,11 @@ export interface Config {
     expire: string;
   };
   redisUrl: string;
+  redis: {
+    host: string;
+    port: number;
+    password?: string;
+  };
   chromadbHost: string;
   chromadbPort: number;
   llm: {
