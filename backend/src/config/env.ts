@@ -12,6 +12,14 @@ for (const envVar of requiredEnvVars) {
   }
 }
 
+// Validate ChromaDB configuration
+const chromadbHost = process.env['CHROMADB_HOST'] || 'localhost';
+const chromadbPort = Number.parseInt(process.env['CHROMADB_PORT'] || '8000', 10);
+
+if (chromadbPort < 1 || chromadbPort > 65535) {
+  throw new Error('CHROMADB_PORT must be a valid port number (1-65535)');
+}
+
 /**
  * Application configuration derived from environment variables.
  * The object is frozen to prevent runtime mutation.
@@ -25,10 +33,8 @@ const config: Config = {
     expire: process.env['JWT_EXPIRE'] || '7d'
   },
   redisUrl: process.env['REDIS_URL']!,
-  chroma: {
-    host: process.env['CHROMADB_HOST'] || 'localhost',
-    port: Number.parseInt(process.env['CHROMADB_PORT'] || '8000', 10)
-  },
+  chromadbHost,
+  chromadbPort,
   llm: {
     apiKey: process.env['LLM_API_KEY']!,
     model: process.env['LLM_MODEL'] || 'gpt-4'

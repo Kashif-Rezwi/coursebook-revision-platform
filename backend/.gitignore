@@ -108,5 +108,9 @@ Thumbs.db
 # Uploads
 uploads/
 
+# ChromaDB vector database
+chroma/
+*.sqlite3
+
 # TypeScript
 *.tsbuildinfo

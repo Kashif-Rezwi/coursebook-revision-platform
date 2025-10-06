@@ -9,12 +9,15 @@
     "dev": "nodemon --exec ts-node -r tsconfig-paths/register src/server.ts",
     "dev:build": "tsc && node dist/server.js",
     "clean": "rm -rf dist",
+    "seed": "ts-node -r tsconfig-paths/register src/scripts/seedDatabase.ts",
     "test": "echo \"Tests will be added later\" && exit 0"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "chromadb": "^1.10.5",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
@@ -27,6 +30,7 @@
     "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/joi": "^17.2.2",
