@@ -27,7 +27,7 @@ export interface IStrongTopic {
 }
 
 export interface IRecentActivity {
-  type: 'quiz_completed' | 'pdf_uploaded' | 'chat_session';
+  type: 'quiz_completed' | 'pdf_uploaded' | 'chat_session' | 'account_created';
   description: string;
   timestamp: Date;
 }
@@ -107,7 +107,7 @@ const progressSchema = new Schema<IProgress>({
   recentActivity: [{
     type: {
       type: String,
-      enum: ['quiz_completed', 'pdf_uploaded', 'chat_session']
+      enum: ['quiz_completed', 'pdf_uploaded', 'chat_session', 'account_created']
     },
     description: String,
     timestamp: {

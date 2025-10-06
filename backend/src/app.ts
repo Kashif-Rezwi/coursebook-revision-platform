@@ -41,8 +41,10 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// API Routes placeholder
-// app.use('/api', routes);
+// API Routes
+import authRoutes from './routes/authRoutes';
+
+app.use('/api/auth', authRoutes);
 
 // 404 handler
 app.use(notFound);
