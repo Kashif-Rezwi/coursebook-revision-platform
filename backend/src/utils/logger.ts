@@ -1,8 +1,9 @@
-const winston = require('winston');
-const DailyRotateFile = require('winston-daily-rotate-file');
-const fs = require('fs');
-const path = require('path');
-const config = require('../config/env');
+import winston from 'winston';
+import DailyRotateFile from 'winston-daily-rotate-file';
+import fs from 'fs';
+import path from 'path';
+import config from '../config/env';
+import { LogLevel } from '../types';
 
 // Ensure logs directory exists
 const logsDir = path.join(process.cwd(), 'logs');
@@ -21,7 +22,7 @@ const baseFormat = winston.format.combine(
 );
 
 const logger = winston.createLogger({
-  level: config.logLevel,
+  level: config.logLevel as LogLevel,
   format: baseFormat,
   transports: [
     new DailyRotateFile({
@@ -48,6 +49,6 @@ if (config.env !== 'production') {
   );
 }
 
-module.exports = logger;
+export default logger;
 
 

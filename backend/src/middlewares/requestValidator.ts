@@ -1,14 +1,15 @@
-const Joi = require('joi');
-const ApiError = require('../utils/apiError');
+import Joi from 'joi';
+import { Request, Response, NextFunction } from 'express';
+import ApiError from '../utils/apiError';
+import { RequestValidator, ValidationSchema, ValidationErrorDetail } from '../types';
 
 /**
  * Validate request body, query, and params against a Joi schema.
  * The schema should validate an object: { body, query, params }.
- * @param {Joi.ObjectSchema} schema
  */
-const validate = (schema) => {
-  return (req, res, next) => {
-    const validationOptions = {
+const validate: RequestValidator = (schema: Joi.ObjectSchema<ValidationSchema>) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    const validationOptions: Joi.ValidationOptions = {
       abortEarly: false,
       allowUnknown: true,
       stripUnknown: true
@@ -23,7 +24,7 @@ const validate = (schema) => {
     const { error, value } = schema.validate(dataToValidate, validationOptions);
 
     if (error) {
-      const details = error.details.map((detail) => ({
+      const details: ValidationErrorDetail[] = error.details.map((detail) => ({
         field: detail.path.join('.'),
         message: detail.message
       }));
@@ -35,6 +36,6 @@ const validate = (schema) => {
   };
 };
 
-module.exports = validate;
+export default validate;
 
 

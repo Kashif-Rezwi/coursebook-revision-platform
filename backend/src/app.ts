@@ -1,13 +1,14 @@
-const express = require('express');
-const helmet = require('helmet');
-const cors = require('cors');
-const morgan = require('morgan');
-const config = require('./config/env');
-const errorHandler = require('./middlewares/errorHandler');
-const notFound = require('./middlewares/notFound');
-const requestLogger = require('./middlewares/requestLogger');
+import express, { Application } from 'express';
+import helmet from 'helmet';
+import cors from 'cors';
+import morgan from 'morgan';
+import config from './config/env';
+import errorHandler from './middlewares/errorHandler';
+import notFound from './middlewares/notFound';
+import requestLogger from './middlewares/requestLogger';
+import { successResponse } from './utils/apiResponse';
 
-const app = express();
+const app: Application = express();
 
 // Security middleware
 app.use(helmet());
@@ -33,8 +34,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(requestLogger);
 
 // Health check route (temporary - will move to routes later)
-app.get('/health', (req, res) => {
-  const { successResponse } = require('./utils/apiResponse');
+app.get('/health', (_req, res) => {
   successResponse(res, 200, 'Server is healthy', {
     uptime: process.uptime(),
     timestamp: new Date().toISOString()
@@ -50,6 +50,6 @@ app.use(notFound);
 // Global error handler (must be last)
 app.use(errorHandler);
 
-module.exports = app;
+export default app;
 
 

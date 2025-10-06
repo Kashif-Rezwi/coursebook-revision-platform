@@ -1,16 +1,17 @@
-const logger = require('../utils/logger');
-const { errorResponse } = require('../utils/apiResponse');
-const config = require('../config/env');
+import { Request, Response, NextFunction } from 'express';
+import logger from '../utils/logger';
+import { errorResponse } from '../utils/apiResponse';
+import config from '../config/env';
+import { ErrorHandler, ValidationErrorDetail, MulterError } from '../types';
 
 /**
  * Global error handling middleware.
  */
-// eslint-disable-next-line no-unused-vars
-const errorHandler = (err, req, res, next) => {
-  let statusCode = err.statusCode || 500;
-  let message = err.message || 'Internal Server Error';
-  let errorCode = err.errorCode || 'INTERNAL_ERROR';
-  let details = null;
+const errorHandler: ErrorHandler = (err: any, req: Request, res: Response, _next: NextFunction) => {
+  let statusCode: number = err.statusCode || 500;
+  let message: string = err.message || 'Internal Server Error';
+  let errorCode: string = err.errorCode || 'INTERNAL_ERROR';
+  let details: ValidationErrorDetail[] | undefined = undefined;
 
   logger.error(`${message}`, {
     statusCode,
@@ -24,7 +25,7 @@ const errorHandler = (err, req, res, next) => {
     statusCode = 400;
     errorCode = 'VALIDATION_ERROR';
     message = 'Validation failed';
-    details = Object.values(err.errors || {}).map((e) => ({
+    details = Object.values(err.errors || {}).map((e: any) => ({
       field: e.path,
       message: e.message
     }));
@@ -38,11 +39,12 @@ const errorHandler = (err, req, res, next) => {
 
   // Handle Multer errors
   if (err.name === 'MulterError') {
+    const multerError = err as MulterError;
     statusCode = 400;
-    if (err.code === 'LIMIT_FILE_SIZE') {
+    if (multerError.code === 'LIMIT_FILE_SIZE') {
       errorCode = 'UPLOAD_FILE_TOO_LARGE';
       message = 'File too large';
-    } else if (err.code === 'LIMIT_FILE_COUNT') {
+    } else if (multerError.code === 'LIMIT_FILE_COUNT') {
       errorCode = 'UPLOAD_TOO_MANY_FILES';
       message = 'Too many files';
     } else {
@@ -58,12 +60,12 @@ const errorHandler = (err, req, res, next) => {
 
   if (config.env === 'production' && statusCode === 500) {
     message = 'Something went wrong';
-    details = null;
+    details = undefined;
   }
 
   return errorResponse(res, statusCode, message, errorCode, details);
 };
 
-module.exports = errorHandler;
+export default errorHandler;
 
 

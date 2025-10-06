@@ -1,9 +1,11 @@
-const logger = require('../utils/logger');
+import { Request, Response, NextFunction } from 'express';
+import logger from '../utils/logger';
+import { RequestLogger } from '../types';
 
 /**
  * Log request method, URL, status code, and response time.
  */
-const requestLogger = (req, res, next) => {
+const requestLogger: RequestLogger = (req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
 
   res.on('finish', () => {
@@ -22,6 +24,6 @@ const requestLogger = (req, res, next) => {
   next();
 };
 
-module.exports = requestLogger;
+export default requestLogger;
 
 

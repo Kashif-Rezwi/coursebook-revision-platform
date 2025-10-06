@@ -1,9 +1,9 @@
-const app = require('./app');
-const config = require('./config/env');
-const logger = require('./utils/logger');
+import app from './app';
+import config from './config/env';
+import logger from './utils/logger';
 
 // Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', (error: Error) => {
   logger.error('Uncaught Exception:', error);
   process.exit(1);
 });
@@ -14,7 +14,7 @@ const server = app.listen(config.port, () => {
 });
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (error) => {
+process.on('unhandledRejection', (error: Error) => {
   logger.error('Unhandled Rejection:', error);
   server.close(() => {
     process.exit(1);
@@ -22,7 +22,7 @@ process.on('unhandledRejection', (error) => {
 });
 
 // Graceful shutdown
-const gracefulShutdown = (signal) => {
+const gracefulShutdown = (signal: string): void => {
   logger.info(`${signal} received. Starting graceful shutdown...`);
 
   server.close(() => {
