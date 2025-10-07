@@ -55,7 +55,12 @@ export const addQuizGenerationJob = async (quizData: {
     throw ApiError.badRequest('Invalid difficulty level', 'INVALID_DIFFICULTY');
   }
 
-  const job = await quizQueue.add(quizData);
+  const job = await quizQueue.add(quizData, {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 2000 },
+    removeOnComplete: true,
+    removeOnFail: false
+  });
   logger.info(`Added quiz generation job: ${job.id}`);
   return job;
 };

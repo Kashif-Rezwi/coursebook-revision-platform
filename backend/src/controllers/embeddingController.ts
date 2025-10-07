@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import embeddingService from '../services/embeddingService';
+import chromaHelper from '../utils/chromaHelper';
 import { successResponse } from '../utils/apiResponse';
 import asyncHandler from '../utils/asyncHandler';
 
@@ -36,6 +37,26 @@ class EmbeddingController {
       200,
       'Embedding test completed successfully',
       testResult
+    );
+  });
+
+  /**
+   * Get embedding count for a PDF
+   */
+  getEmbeddingCount = asyncHandler(async (req: Request, res: Response) => {
+    const pdfId = String(req.params['pdfId']);
+    
+    const count = await chromaHelper.getEmbeddingCount(pdfId);
+    
+    return successResponse(
+      res,
+      200,
+      'Embedding count retrieved successfully',
+      {
+        pdfId,
+        count,
+        timestamp: new Date().toISOString()
+      }
     );
   });
 }

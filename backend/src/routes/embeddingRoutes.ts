@@ -21,4 +21,13 @@ const testEmbeddingSchema = Joi.object({
 
 router.post('/embedding/test', validate(testEmbeddingSchema), embeddingController.testEmbedding);
 
+// Get embedding count for a PDF
+const embeddingCountSchema = Joi.object({
+  params: Joi.object({
+    pdfId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required()
+  })
+});
+
+router.get('/embeddings/count/:pdfId', validate(embeddingCountSchema), embeddingController.getEmbeddingCount);
+
 export default router;
