@@ -4,14 +4,15 @@ import authenticate from '../middlewares/authenticate';
 import upload from '../config/multer';
 import validate from '../middlewares/requestValidator';
 import { getPDFsSchema, pdfIdSchema } from '../validators/pdfValidator';
+import { uploadLimiter } from '../middlewares/rateLimiter';
 
 const router = express.Router();
 
 // All PDF routes require authentication
 router.use(authenticate);
 
-// Upload PDF
-router.post('/pdfs/upload', upload.single('file'), pdfController.uploadPDF);
+// Upload PDF with upload rate limiting
+router.post('/pdfs/upload', uploadLimiter, upload.single('file'), pdfController.uploadPDF);
 
 // Get user's PDFs
 router.get('/pdfs', validate(getPDFsSchema), pdfController.getUserPDFs);

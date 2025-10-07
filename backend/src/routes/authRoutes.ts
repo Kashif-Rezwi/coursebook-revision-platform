@@ -3,12 +3,13 @@ import authController from '../controllers/authController';
 import authenticate from '../middlewares/authenticate';
 import validate from '../middlewares/requestValidator';
 import { registerSchema, loginSchema } from '../validators/authValidator';
+import { authLimiter } from '../middlewares/rateLimiter';
 
 const router = express.Router();
 
-// Public routes
-router.post('/register', validate(registerSchema), authController.register);
-router.post('/login', validate(loginSchema), authController.login);
+// Public routes with strict rate limiting
+router.post('/register', authLimiter, validate(registerSchema), authController.register);
+router.post('/login', authLimiter, validate(loginSchema), authController.login);
 
 // Protected routes
 router.get('/profile', authenticate, authController.getProfile);

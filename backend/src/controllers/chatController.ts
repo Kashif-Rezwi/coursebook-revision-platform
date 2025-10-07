@@ -10,6 +10,9 @@ import { extractCitations } from '../utils/citationExtractor';
 interface AuthenticatedRequest extends Request {
   user: {
     userId: string;
+    email: string;
+    role: string;
+    name?: string;
   };
 }
 

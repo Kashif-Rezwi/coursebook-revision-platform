@@ -6,6 +6,9 @@ import asyncHandler from '../utils/asyncHandler';
 interface AuthenticatedRequest extends Request {
   user: {
     userId: string;
+    email: string;
+    role: string;
+    name?: string;
   };
 }
 
