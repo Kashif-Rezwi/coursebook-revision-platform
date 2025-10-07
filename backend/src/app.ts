@@ -44,9 +44,13 @@ app.get('/health', (_req, res) => {
 // API Routes
 import authRoutes from './routes/authRoutes';
 import jobRoutes from './routes/jobRoutes';
+import pdfRoutes from './routes/pdfRoutes';
+import embeddingRoutes from './routes/embeddingRoutes';
 
 app.use('/api/auth', authRoutes);
 app.use('/api', jobRoutes);
+app.use('/api', pdfRoutes);
+app.use('/api', embeddingRoutes);
 
 // 404 handler
 app.use(notFound);

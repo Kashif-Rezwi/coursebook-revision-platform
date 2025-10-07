@@ -1,11 +1,14 @@
 import Queue from 'bull';
 import { PDF } from '../models';
+import { parsePDF } from '../utils/pdfParser';
+import { chunkText } from '../utils/textChunker';
+import embeddingService from '../services/embeddingService';
+import chromaHelper from '../utils/chromaHelper';
 import logger from '../utils/logger';
-import { QUEUE_CONSTANTS } from '../utils/jobHelper';
 
 class PDFProcessor {
   async processPDF(job: Queue.Job) {
-    const { pdfId, userId: _userId, filePath: _filePath } = job.data;
+    const { pdfId, filePath } = job.data;
 
     try {
       // Update status to processing
@@ -17,25 +20,54 @@ class PDFProcessor {
       job.progress(10);
       logger.info(`PDF ${pdfId}: Status updated to processing`);
 
-      // Simulate PDF parsing (will be implemented in Module 5)
-      await this.simulateProcessing(job, 'Parsing PDF', 30);
+      // Step 1: Parse PDF
+      job.progress(20);
+      logger.info(`PDF ${pdfId}: Parsing PDF`);
+      const pdfData = await parsePDF(filePath);
 
-      // Simulate text chunking (will be implemented in Module 5)
-      await this.simulateProcessing(job, 'Chunking text', 50);
+      // Update page count and metadata
+      await PDF.findByIdAndUpdate(pdfId, {
+        pageCount: pdfData.numpages,
+        'metadata.title': pdfData.info.Title,
+        'metadata.author': pdfData.info.Author,
+        'metadata.subject': pdfData.info.Subject,
+        'metadata.keywords': pdfData.info.Keywords ? pdfData.info.Keywords.split(',').map((k: string) => k.trim()) : []
+      });
 
-      // Simulate embedding generation (will be implemented in Module 5)
-      await this.simulateProcessing(job, 'Generating embeddings', 80);
+      job.progress(30);
 
-      // Simulate storing in ChromaDB (will be implemented in Module 5)
-      await this.simulateProcessing(job, 'Storing embeddings', 95);
+      // Step 2: Chunk text
+      logger.info(`PDF ${pdfId}: Chunking text`);
+      const chunks = chunkText(pdfData.text);
 
-      // Update PDF status to ready
+      if (chunks.length === 0) {
+        throw new Error('No text content found in PDF');
+      }
+
+      job.progress(40);
+      logger.info(`PDF ${pdfId}: Created ${chunks.length} chunks`);
+
+      // Step 3: Generate embeddings
+      logger.info(`PDF ${pdfId}: Generating embeddings using ${embeddingService.getCurrentMethod()}`);
+      const chunkTexts = chunks.map(chunk => chunk.text);
+      const embeddings = await embeddingService.generateBatchEmbeddings(chunkTexts);
+
+      job.progress(70);
+      logger.info(`PDF ${pdfId}: Generated ${embeddings.length} embeddings`);
+
+      // Step 4: Store in ChromaDB
+      logger.info(`PDF ${pdfId}: Storing embeddings in ChromaDB`);
+      await chromaHelper.addEmbeddings(pdfId, chunks, embeddings);
+
+      job.progress(90);
+
+      // Step 5: Update PDF status to ready
       await PDF.findByIdAndUpdate(
         pdfId,
         {
           status: 'ready',
-          'embeddingStats.totalChunks': 50,  // Mock value
-          'embeddingStats.embeddedChunks': 50,
+          'embeddingStats.totalChunks': chunks.length,
+          'embeddingStats.embeddedChunks': embeddings.length,
           'embeddingStats.lastProcessedAt': new Date()
         },
         { new: true }
@@ -47,7 +79,8 @@ class PDFProcessor {
       return {
         success: true,
         pdfId,
-        chunksProcessed: 50
+        chunksProcessed: chunks.length,
+        pageCount: pdfData.numpages
       };
 
     } catch (error) {
@@ -61,13 +94,6 @@ class PDFProcessor {
 
       throw error;
     }
-  }
-
-  // Simulate processing with delay (for testing)
-  async simulateProcessing(job: Queue.Job, stepName: string, progressPercent: number) {
-    logger.info(`PDF ${job.data.pdfId}: ${stepName}`);
-    await new Promise(resolve => setTimeout(resolve, QUEUE_CONSTANTS.SIMULATION_DELAYS.PDF_PROCESSING));
-    job.progress(progressPercent);
   }
 }
 

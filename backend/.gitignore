@@ -106,7 +106,10 @@ Thumbs.db
 *~
 
 # Uploads
-uploads/
+uploads/*
+!uploads/.gitkeep
+temp/*
+!temp/.gitkeep
 
 # ChromaDB vector database
 chroma/

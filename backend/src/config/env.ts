@@ -5,7 +5,7 @@ import { Config } from '../types';
 dotenv.config();
 
 // Validate required variables
-const requiredEnvVars: (keyof NodeJS.ProcessEnv)[] = ['MONGODB_URI', 'JWT_SECRET', 'REDIS_URL', 'LLM_API_KEY'];
+const requiredEnvVars: (keyof NodeJS.ProcessEnv)[] = ['MONGODB_URI', 'JWT_SECRET', 'REDIS_URL'];
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
     throw new Error(`Missing required environment variable: ${envVar}`);
@@ -46,8 +46,8 @@ const config: Config = {
   chromadbHost,
   chromadbPort,
   llm: {
-    apiKey: process.env['LLM_API_KEY']!,
-    model: process.env['LLM_MODEL'] || 'gpt-4'
+    apiKey: process.env['HUGGINGFACE_API_KEY'] || process.env['LLM_API_KEY'] || '',
+    model: process.env['LLM_MODEL'] || 'sentence-transformers/all-MiniLM-L6-v2'
   },
   upload: {
     path: process.env['FILE_UPLOAD_PATH'] || './uploads',

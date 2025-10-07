@@ -31,7 +31,19 @@ const validate: RequestValidator = (schema: Joi.ObjectSchema<ValidationSchema>) 
       throw new ApiError(400, 'Validation failed', 'VALIDATION_ERROR', true, '', details);
     }
 
-    Object.assign(req, value);
+    // Avoid overwriting Express request objects wholesale (e.g., req.query has getter-only semantics in Express 5)
+    // Assign validated parts individually to preserve framework invariants
+    if (value.body !== undefined) {
+      req.body = value.body as any;
+    }
+    if (value.query !== undefined) {
+      // req.query is a getter-only property in Express v5; mutate the object instead of reassigning
+      const currentQuery: any = req.query || {};
+      Object.assign(currentQuery, value.query);
+    }
+    if (value.params !== undefined) {
+      req.params = value.params as any;
+    }
     return next();
   };
 };
