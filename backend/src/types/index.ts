@@ -21,6 +21,13 @@ export interface Config {
     apiKey: string;
     model: string;
   };
+  huggingface: {
+    apiKey: string;
+    model: string;
+    temperature?: number;
+    maxTokens?: number;
+    topP?: number;
+  };
   upload: {
     path: string;
     maxFileSize: number;
@@ -101,6 +108,16 @@ export interface EnvVars {
   CHROMADB_PORT?: string;
   LLM_API_KEY?: string;
   LLM_MODEL?: string;
+  HUGGINGFACE_API_KEY?: string;
+  HUGGINGFACE_MODEL?: string;
+  DEFAULT_TEXT_GEN_MODEL?: string;
+  TEXT_GEN_MODEL_SMALL?: string;
+  TEXT_GEN_MODEL_MEDIUM?: string;
+  TEXT_GEN_MODEL_LARGE?: string;
+  CHAT_MODEL_EDUCATION?: string;
+  HUGGINGFACE_TEMPERATURE?: string;
+  HUGGINGFACE_MAX_TOKENS?: string;
+  HUGGINGFACE_TOP_P?: string;
   FILE_UPLOAD_PATH?: string;
   MAX_FILE_SIZE?: string;
   CORS_ORIGIN?: string;

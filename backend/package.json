@@ -16,9 +16,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@huggingface/inference": "^4.11.0",
+    "@huggingface/inference": "^2.8.1",
     "@types/jsonwebtoken": "^9.0.10",
     "ai": "^3.4.33",
+    "axios": "^1.12.2",
     "bcryptjs": "^2.4.3",
     "bull": "^4.16.5",
     "chromadb": "^1.10.5",
@@ -35,6 +36,7 @@
     "morgan": "^1.10.1",
     "multer": "^1.4.5-lts.1",
     "natural": "^8.1.0",
+    "node-cache": "^5.1.2",
     "pdf-parse": "^1.1.1",
     "winston": "^3.18.3",
     "winston-daily-rotate-file": "^5.0.0"

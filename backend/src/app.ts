@@ -46,11 +46,13 @@ import authRoutes from './routes/authRoutes';
 import jobRoutes from './routes/jobRoutes';
 import pdfRoutes from './routes/pdfRoutes';
 import embeddingRoutes from './routes/embeddingRoutes';
+import chatRoutes from './routes/chatRoutes';
 
 app.use('/api/auth', authRoutes);
 app.use('/api', jobRoutes);
 app.use('/api', pdfRoutes);
 app.use('/api', embeddingRoutes);
+app.use('/api', chatRoutes);
 
 // 404 handler
 app.use(notFound);
