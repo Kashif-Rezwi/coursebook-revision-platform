@@ -15,7 +15,7 @@ export const pdfController = {
       throw ApiError.badRequest('No file uploaded', 'NO_FILE');
     }
 
-    const result = await pdfService.uploadPDF((req as any).file, getUserId(req));
+    const result = await pdfService.upload((req as any).file, getUserId(req));
 
     return respondCreated(res, result, 'PDF uploaded successfully and processing started');
   }),
@@ -35,7 +35,7 @@ export const pdfController = {
    */
   getPDF: asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const pdfId = getParam(req, 'pdfId');
-    const pdf = await pdfService.getPDFById(pdfId, getUserId(req));
+    const pdf = await pdfService.findById(pdfId, getUserId(req));
 
     return respondData(res, { pdf }, 'PDF retrieved successfully');
   }),
@@ -45,7 +45,7 @@ export const pdfController = {
    */
   deletePDF: asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const pdfId = getParam(req, 'pdfId');
-    const result = await pdfService.deletePDF(pdfId, getUserId(req));
+    const result = await pdfService.remove(pdfId, getUserId(req));
 
     return respondData(res, result, 'PDF deleted successfully');
   })

@@ -36,7 +36,7 @@ export const quizController = {
     const { answers, timeTaken } = req.body as any;
     const quizId = getParam(req, 'quizId');
 
-    const attempt = await quizService.submitQuizAttempt(
+    const attempt = await quizService.submitAttempt(
       quizId,
       getUserId(req),
       answers,
@@ -48,13 +48,13 @@ export const quizController = {
 
   getQuizAttempts: asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const quizId = getParam(req, 'quizId');
-    const attempts = await quizService.getQuizAttempts(quizId, getUserId(req));
+    const attempts = await quizService.getAttempts(quizId, getUserId(req));
     return respondData(res, { attempts }, 'Quiz attempts retrieved successfully');
   }),
 
   deleteQuiz: asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const quizId = getParam(req, 'quizId');
-    const result = await quizService.deleteQuiz(quizId, getUserId(req));
+    const result = await quizService.remove(quizId, getUserId(req));
     return respondData(res, result, 'Quiz deleted successfully');
   })
 };

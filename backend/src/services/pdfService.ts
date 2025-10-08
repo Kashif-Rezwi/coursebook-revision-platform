@@ -1,8 +1,9 @@
 import { PDF } from '../models';
+import { BaseService, DeleteResult } from './BaseService';
+import pdfRepository from '../repositories/PDFRepository';
 import { addPDFProcessingJob } from '../queues/pdfProcessingQueue';
 import { deleteFile } from '../utils/fileStorage';
 import chromaHelper from '../utils/chromaHelper';
-// embeddingService is used in worker, not directly here
 import ApiError from '../utils/apiError';
 import logger from '../utils/logger';
 
@@ -20,17 +21,18 @@ export interface PDFListResult {
   skip: number;
 }
 
-class PDFService {
+class PDFService extends BaseService<any> {
+  constructor() {
+    super(PDF, 'PDF');
+  }
+
   /**
    * Upload PDF file and create processing job
-   * @param file - Multer file object
-   * @param userId - User ID who uploaded the file
-   * @returns Promise<{pdf: any, jobId: string}>
    */
-  async uploadPDF(file: Express.Multer.File, userId: string): Promise<{pdf: any, jobId: string}> {
+  async upload(file: Express.Multer.File, userId: string): Promise<{pdf: any, jobId: string}> {
     try {
       // Create PDF document
-      const pdf = await PDF.create({
+      const pdf = await this.model.create({
         userId,
         filename: file.filename,
         originalName: file.originalname,
@@ -74,74 +76,17 @@ class PDFService {
 
   /**
    * Get user's PDFs with filtering and pagination
-   * @param userId - User ID
-   * @param filters - Filter options
-   * @returns Promise<PDFListResult>
    */
   async getUserPDFs(userId: string, filters: PDFFilters = {}): Promise<PDFListResult> {
-    try {
-      const { status, sortBy = '-createdAt' } = filters;
-      const limit = (filters as any).limit ?? 50;
-      const skip = (filters as any).skip ?? 0;
-
-      const query: any = { userId };
-      
-      if (status) {
-        query.status = status;
-      }
-
-      const pdfs = await PDF.find(query)
-        .sort(sortBy)
-        .limit(parseInt(limit.toString()))
-        .skip(parseInt(skip.toString()))
-        .select('-__v');
-
-      const total = await PDF.countDocuments(query);
-
-      return {
-        pdfs,
-        total,
-        limit: parseInt(limit.toString()),
-        skip: parseInt(skip.toString())
-      };
-    } catch (error) {
-      logger.error('Failed to get user PDFs:', error as any);
-      throw ApiError.internal('Failed to retrieve PDFs', 'PDF_RETRIEVAL_ERROR');
-    }
-  }
-
-  /**
-   * Get single PDF by ID
-   * @param pdfId - PDF document ID
-   * @param userId - User ID
-   * @returns Promise<any>
-   */
-  async getPDFById(pdfId: string, userId: string): Promise<any> {
-    try {
-      const pdf = await PDF.findOne({ _id: pdfId, userId });
-
-      if (!pdf) {
-        throw ApiError.notFound('PDF not found', 'PDF_NOT_FOUND');
-      }
-
-      return pdf;
-    } catch (error: any) {
-      if (error.name === 'CastError') {
-        throw ApiError.badRequest('Invalid PDF ID', 'INVALID_PDF_ID');
-      }
-      throw error;
-    }
+    return pdfRepository.getUserPDFs(userId, filters);
   }
 
   /**
    * Delete PDF and cleanup associated data
-   * @param pdfId - PDF document ID
-   * @param userId - User ID
-   * @returns Promise<{message: string, pdfId: string}>
    */
-  async deletePDF(pdfId: string, userId: string): Promise<{message: string, pdfId: string}> {
+  override async remove(pdfId: string, userId: string): Promise<DeleteResult> {
     try {
-      const pdf = await this.getPDFById(pdfId, userId);
+      const pdf = await this.findById(pdfId, userId);
 
       // Delete file from filesystem
       if (pdf.filePath) {
@@ -152,13 +97,13 @@ class PDFService {
       await chromaHelper.deleteEmbeddings(pdfId);
 
       // Delete PDF document
-      await PDF.findByIdAndDelete(pdfId);
+      await this.model.findByIdAndDelete(pdfId);
 
       logger.info(`PDF deleted: ${pdfId} by user ${userId}`);
 
       return {
         message: 'PDF deleted successfully',
-        pdfId
+        id: pdfId
       };
     } catch (error) {
       logger.error('PDF deletion failed:', error as any);
@@ -168,31 +113,15 @@ class PDFService {
 
   /**
    * Update PDF processing status
-   * @param pdfId - PDF document ID
-   * @param status - New status
-   * @param error - Error message if status is failed
-   * @returns Promise<any>
    */
-  async updatePDFStatus(pdfId: string, status: string, error?: string): Promise<any> {
+  async updateStatus(pdfId: string, status: string, error?: string): Promise<any> {
     try {
-      const updateData: any = { status };
-      
-      if (error) {
-        updateData.processingError = error;
-      }
-
-      const pdf = await PDF.findByIdAndUpdate(
-        pdfId,
-        updateData,
-        { new: true }
-      );
-
+      const pdf = await pdfRepository.updateStatus(pdfId, status, error);
       if (!pdf) {
         throw ApiError.notFound('PDF not found', 'PDF_NOT_FOUND');
       }
 
       logger.info(`PDF ${pdfId} status updated to ${status}`);
-
       return pdf;
     } catch (error) {
       logger.error('PDF status update failed:', error as any);

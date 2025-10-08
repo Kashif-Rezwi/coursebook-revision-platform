@@ -1,18 +1,37 @@
 import { Quiz, QuizAttempt, Progress } from '../models';
+import { BaseService, DeleteResult } from './BaseService';
+import quizRepository from '../repositories/QuizRepository';
 import { addQuizGenerationJob } from '../queues/quizGenerationQueue';
 import evaluationService from './evaluationService';
 import { calculateQuizScore } from '../utils/scoreCalculator';
 import ApiError from '../utils/apiError';
 import logger from '../utils/logger';
 
-class QuizService {
-  async createQuiz(userId: string, pdfId: string, options: {
-    title?: string;
-    mcqCount?: number;
-    saqCount?: number;
-    laqCount?: number;
-    difficulty?: 'easy' | 'medium' | 'hard';
-  } = {}) {
+export interface QuizCreateOptions {
+  title?: string;
+  mcqCount?: number;
+  saqCount?: number;
+  laqCount?: number;
+  difficulty?: 'easy' | 'medium' | 'hard';
+}
+
+export interface QuizFilters {
+  pdfId?: string;
+  status?: string;
+  limit?: number;
+  skip?: number;
+  sortBy?: string;
+}
+
+class QuizService extends BaseService<any> {
+  constructor() {
+    super(Quiz, 'Quiz');
+  }
+
+  /**
+   * Create quiz and start generation job
+   */
+  async createQuiz(userId: string, pdfId: string, options: QuizCreateOptions = {}): Promise<{quiz: any, jobId: string}> {
     try {
       const {
         title = 'New Quiz',
@@ -22,7 +41,7 @@ class QuizService {
         difficulty = 'medium'
       } = options;
 
-      const quiz = await Quiz.create({
+      const quiz = await this.model.create({
         userId,
         pdfId,
         title,
@@ -45,64 +64,35 @@ class QuizService {
 
       logger.info(`Quiz generation job created: ${job.id} for quiz ${(quiz as any)._id}`);
 
-      return { quiz, jobId: job.id };
+      return { quiz, jobId: String(job.id) };
     } catch (error) {
       logger.error('Quiz creation failed:', error);
       throw ApiError.internal('Failed to create quiz', 'QUIZ_CREATE_ERROR');
     }
   }
 
-  async getQuizById(quizId: string, userId: string, includeAnswers: boolean = false) {
-    try {
-      const quiz = await Quiz.findOne({ _id: quizId, userId })
-        .populate('pdfId', 'originalName pageCount status');
-
-      if (!quiz) {
-        throw ApiError.notFound('Quiz not found', 'QUIZ_NOT_FOUND');
-      }
-
-      if (!includeAnswers && quiz.status === 'ready') {
-        const quizObj = quiz.toObject();
-        quizObj.questions = quizObj.questions.map((q: any) => {
-          const { correctAnswer, ...rest } = q;
-          return rest;
-        });
-        return quizObj;
-      }
-
-      return quiz;
-    } catch (error: any) {
-      if (error?.name === 'CastError') {
-        throw ApiError.badRequest('Invalid quiz ID', 'INVALID_QUIZ_ID');
-      }
-      throw error;
-    }
+  /**
+   * Get user's quizzes with filtering
+   */
+  async getUserQuizzes(userId: string, filters: QuizFilters = {}): Promise<any> {
+    return quizRepository.getUserQuizzes(userId, filters);
   }
 
-  async getUserQuizzes(userId: string, filters: any = {}) {
-    try {
-      const { pdfId, status, limit = 50, skip = 0, sortBy = '-createdAt' } = filters;
-      const query: any = { userId };
-      if (pdfId) query.pdfId = pdfId;
-      if (status) query.status = status;
-
-      const quizzes = await Quiz.find(query)
-        .sort(sortBy)
-        .limit(parseInt(limit))
-        .skip(parseInt(skip))
-        .select('-questions')
-        .populate('pdfId', 'originalName pageCount status');
-
-      const total = await Quiz.countDocuments(query);
-
-      return { quizzes, total, limit: parseInt(limit), skip: parseInt(skip) };
-    } catch (error) {
-      logger.error('Failed to get user quizzes:', error);
-      throw ApiError.internal('Failed to retrieve quizzes', 'QUIZ_RETRIEVAL_ERROR');
+  /**
+   * Get quiz by ID with optional answers
+   */
+  async getQuizById(quizId: string, userId: string, includeAnswers: boolean = false): Promise<any> {
+    const quiz = await quizRepository.getQuizById(quizId, userId, includeAnswers);
+    if (!quiz) {
+      throw this.createNotFoundError();
     }
+    return quiz;
   }
 
-  async submitQuizAttempt(quizId: string, userId: string, answers: string[], timeTaken: number | null = null) {
+  /**
+   * Submit quiz attempt
+   */
+  async submitAttempt(quizId: string, userId: string, answers: string[], timeTaken: number | null = null): Promise<any> {
     try {
       const quiz: any = await this.getQuizById(quizId, userId, true);
 
@@ -159,7 +149,35 @@ class QuizService {
     }
   }
 
-  async updateUserProgress(userId: string, attempt: any, quiz: any) {
+  /**
+   * Get quiz attempts
+   */
+  async getAttempts(quizId: string, userId: string): Promise<any[]> {
+    return quizRepository.getQuizAttempts(quizId, userId);
+  }
+
+  /**
+   * Delete quiz and all attempts
+   */
+  override async remove(quizId: string, userId: string): Promise<DeleteResult> {
+    try {
+      const quiz = await quizRepository.deleteQuizAndAttempts(quizId, userId);
+      if (!quiz) {
+        throw this.createNotFoundError();
+      }
+
+      logger.info(`Quiz deleted: ${quizId} by user ${userId}`);
+      return { message: 'Quiz deleted successfully', id: quizId };
+    } catch (error) {
+      logger.error('Quiz deletion failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update user progress after quiz attempt
+   */
+  private async updateUserProgress(userId: string, attempt: any, quiz: any): Promise<void> {
     try {
       let progress = await Progress.findOne({ userId });
       if (!progress) {
@@ -172,31 +190,11 @@ class QuizService {
     }
   }
 
-  async getQuizAttempts(quizId: string, userId: string) {
-    try {
-      const attempts = await QuizAttempt.find({ quizId, userId })
-        .sort('-completedAt')
-        .select('-answers');
-      return attempts;
-    } catch (error) {
-      logger.error('Failed to get quiz attempts:', error);
-      throw ApiError.internal('Failed to retrieve attempts', 'ATTEMPT_RETRIEVAL_ERROR');
-    }
-  }
-
-  async deleteQuiz(quizId: string, userId: string) {
-    try {
-      const quiz = await Quiz.findOneAndDelete({ _id: quizId, userId });
-      if (!quiz) {
-        throw ApiError.notFound('Quiz not found', 'QUIZ_NOT_FOUND');
-      }
-      await QuizAttempt.deleteMany({ quizId });
-      logger.info(`Quiz deleted: ${quizId} by user ${userId}`);
-      return { message: 'Quiz deleted successfully', quizId };
-    } catch (error) {
-      logger.error('Quiz deletion failed:', error);
-      throw error;
-    }
+  /**
+   * Create standardized not found error
+   */
+  private createNotFoundError() {
+    return ApiError.notFound('Quiz not found', 'QUIZ_NOT_FOUND');
   }
 }
 

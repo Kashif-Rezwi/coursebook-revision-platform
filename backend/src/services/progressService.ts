@@ -24,59 +24,7 @@ import {
 import { IQuizAttempt } from '../models/QuizAttempt';
 import ApiError from '../utils/apiError';
 import logger from '../utils/logger';
-import {
-  handleProgressError,
-  validateUserId,
-  validateDateRange,
-  validateScoreRange,
-  validatePagination,
-  ProgressCalculationError
-} from '../utils/progressErrors';
-import performanceMonitor from '../utils/performanceMonitor';
-
-// Simple in-memory cache for frequently accessed data
-interface CacheEntry<T> {
-  data: T;
-  timestamp: number;
-  ttl: number;
-}
-
-class ProgressCache {
-  private cache = new Map<string, CacheEntry<any>>();
-  private readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
-
-  set<T>(key: string, data: T, ttl: number = this.DEFAULT_TTL): void {
-    this.cache.set(key, {
-      data,
-      timestamp: Date.now(),
-      ttl
-    });
-  }
-
-  get<T>(key: string): T | null {
-    const entry = this.cache.get(key);
-    if (!entry) return null;
-
-    const now = Date.now();
-    if (now - entry.timestamp > entry.ttl) {
-      this.cache.delete(key);
-      return null;
-    }
-
-    return entry.data as T;
-  }
-
-  clear(): void {
-    this.cache.clear();
-  }
-
-  clearUserData(userId: string): void {
-    const keysToDelete = Array.from(this.cache.keys()).filter(key => key.includes(userId));
-    keysToDelete.forEach(key => this.cache.delete(key));
-  }
-}
-
-const progressCache = new ProgressCache();
+import CacheService from './CacheService';
 
 export interface DashboardData {
   overallStats: OverallStats;
@@ -144,25 +92,18 @@ export interface ExportData {
 
 class ProgressService {
   async getDashboard(userId: string): Promise<DashboardData> {
-    const metric = performanceMonitor.startOperation('getDashboard', userId);
-    
     try {
-      // Validate input
-      validateUserId(userId);
+      if (!userId) {
+        throw ApiError.badRequest('User ID is required', 'INVALID_USER_ID');
+      }
 
       const cacheKey = `dashboard:${userId}`;
       
       // Check cache first
-      try {
-        const cachedData = progressCache.get<DashboardData>(cacheKey);
-        if (cachedData) {
-          logger.info(`Dashboard data served from cache for user ${userId}`);
-          performanceMonitor.endOperation(metric, true, undefined, { cacheHit: true });
-          return cachedData;
-        }
-      } catch (cacheError) {
-        logger.warn(`Cache error for user ${userId}:`, cacheError);
-        // Continue without cache
+      const cachedData = CacheService.get<DashboardData>(cacheKey);
+      if (cachedData) {
+        logger.info(`Dashboard data served from cache for user ${userId}`);
+        return cachedData;
       }
 
       // Get progress document
@@ -180,22 +121,14 @@ class ProgressService {
         .limit(10)
         .populate('quizId', 'title pdfId');
 
-      // Calculate various metrics with error handling
-      let overallStats, topicAnalytics, weakTopics, strongTopics, streak, performanceTrend, prediction;
-      
-      try {
-        overallStats = calculateOverallStats(progress as IProgress);
-        topicAnalytics = calculateTopicAnalytics(progress.topicPerformance);
-        weakTopics = identifyWeakTopics(progress.topicPerformance);
-        strongTopics = identifyStrongTopics(progress.topicPerformance);
-        streak = calculateLearningStreak(progress.recentActivity);
-        performanceTrend = calculatePerformanceTrend(recentAttempts);
-        prediction = predictNextScore(recentAttempts);
-      } catch (calcError) {
-        logger.error(`Calculation error for user ${userId}:`, calcError);
-        const errorMessage = calcError instanceof Error ? calcError.message : String(calcError);
-        throw new ProgressCalculationError('dashboard metrics', errorMessage);
-      }
+      // Calculate metrics
+      const overallStats = calculateOverallStats(progress as IProgress);
+      const topicAnalytics = calculateTopicAnalytics(progress.topicPerformance);
+      const weakTopics = identifyWeakTopics(progress.topicPerformance);
+      const strongTopics = identifyStrongTopics(progress.topicPerformance);
+      const streak = calculateLearningStreak(progress.recentActivity);
+      const performanceTrend = calculatePerformanceTrend(recentAttempts);
+      const prediction = predictNextScore(recentAttempts);
 
       const dashboardData: DashboardData = {
         overallStats,
@@ -209,21 +142,14 @@ class ProgressService {
         lastUpdated: progress.lastUpdated
       };
 
-      // Cache the result for 2 minutes (shorter TTL for dashboard data)
-      try {
-        progressCache.set(cacheKey, dashboardData, 2 * 60 * 1000);
-      } catch (cacheError) {
-        logger.warn(`Failed to cache dashboard data for user ${userId}:`, cacheError);
-        // Continue without caching
-      }
+      // Cache the result for 2 minutes
+      CacheService.set(cacheKey, dashboardData, 2 * 60 * 1000);
 
       logger.info(`Dashboard data retrieved for user ${userId}`);
-      performanceMonitor.endOperation(metric, true, undefined, { cacheHit: false });
       return dashboardData;
     } catch (error) {
       logger.error('Failed to get dashboard:', error);
-      performanceMonitor.endOperation(metric, false, error instanceof Error ? error.message : String(error));
-      return handleProgressError(error, 'getDashboard', userId);
+      throw ApiError.internal('Failed to retrieve dashboard data', 'DASHBOARD_ERROR');
     }
   }
 
@@ -232,7 +158,7 @@ class ProgressService {
       const cacheKey = `stats:${userId}`;
       
       // Check cache first
-      const cachedStats = progressCache.get<OverallStats>(cacheKey);
+      const cachedStats = CacheService.get<OverallStats>(cacheKey);
       if (cachedStats) {
         logger.info(`Overall stats served from cache for user ${userId}`);
         return cachedStats;
@@ -248,7 +174,7 @@ class ProgressService {
       }
 
       // Cache the result for 5 minutes
-      progressCache.set(cacheKey, stats, 5 * 60 * 1000);
+      CacheService.set(cacheKey, stats, 5 * 60 * 1000);
 
       logger.info(`Overall stats retrieved for user ${userId}`);
       return stats;
@@ -308,11 +234,10 @@ class ProgressService {
   }
 
   async getQuizHistory(userId: string, filters: QuizHistoryFilters = {}): Promise<QuizHistoryResult> {
-    const metric = performanceMonitor.startOperation('getQuizHistory', userId);
-    
     try {
-      // Validate input
-      validateUserId(userId);
+      if (!userId) {
+        throw ApiError.badRequest('User ID is required', 'INVALID_USER_ID');
+      }
       
       const {
         limit = 50,
@@ -323,11 +248,6 @@ class ProgressService {
         minScore,
         maxScore
       } = filters;
-
-      // Validate filters
-      validatePagination(limit, skip);
-      validateDateRange(fromDate, toDate);
-      validateScoreRange(minScore, maxScore);
 
       const query: any = { userId };
 
@@ -359,20 +279,16 @@ class ProgressService {
 
       logger.info(`Quiz history retrieved for user ${userId}: ${attempts.length} attempts`);
 
-      const result = {
+      return {
         attempts,
         total,
         limit: parseInt(limit.toString()),
         skip: parseInt(skip.toString()),
         groupedByDate
       };
-
-      performanceMonitor.endOperation(metric, true, undefined, { recordCount: attempts.length });
-      return result;
     } catch (error) {
       logger.error('Failed to get quiz history:', error);
-      performanceMonitor.endOperation(metric, false, error instanceof Error ? error.message : String(error));
-      return handleProgressError(error, 'getQuizHistory', userId);
+      throw ApiError.internal('Failed to retrieve quiz history', 'QUIZ_HISTORY_ERROR');
     }
   }
 
@@ -486,32 +402,14 @@ class ProgressService {
 
   // Method to clear cache when progress is updated
   clearUserCache(userId: string): void {
-    progressCache.clearUserData(userId);
+    CacheService.clearPattern(userId);
     logger.info(`Cache cleared for user ${userId}`);
   }
 
   // Method to clear all cache (useful for testing or maintenance)
   clearAllCache(): void {
-    progressCache.clear();
+    CacheService.clear();
     logger.info('All progress cache cleared');
-  }
-
-  // Method to get performance metrics
-  getPerformanceMetrics(operation?: string, userId?: string) {
-    return {
-      metrics: performanceMonitor.getMetrics(operation, userId),
-      summary: performanceMonitor.getSummary(),
-      averageDuration: operation ? performanceMonitor.getAverageDuration(operation) : null,
-      successRate: operation ? performanceMonitor.getSuccessRate(operation) : null,
-      cacheHitRate: operation ? performanceMonitor.getCacheHitRate(operation) : null,
-      errorRate: performanceMonitor.getErrorRate(operation),
-      slowOperations: performanceMonitor.getSlowOperations()
-    };
-  }
-
-  // Method to clear performance metrics
-  clearPerformanceMetrics(): void {
-    performanceMonitor.clearMetrics();
   }
 }
 

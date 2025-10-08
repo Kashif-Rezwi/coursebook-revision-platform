@@ -43,7 +43,7 @@ export const chatController = {
     const authReq = req as AuthenticatedRequest;
     const chatId = getParam(req, 'chatId');
 
-    const chat = await chatService.getChatById(chatId, getUserId(authReq));
+    const chat = await chatService.findById(chatId, getUserId(authReq));
 
     return respondData(res, { chat }, 'Chat retrieved successfully');
   }),
@@ -61,7 +61,7 @@ export const chatController = {
     }
 
     // Get chat
-    const chat = await chatService.getChatById(chatId, getUserId(authReq));
+    const chat = await chatService.findById(chatId, getUserId(authReq));
 
     // Add user message to chat
     await chatService.addMessage(chatId, getUserId(authReq), 'user', message);
@@ -139,7 +139,7 @@ export const chatController = {
       throw ApiError.badRequest('Chat ID is required', 'MISSING_CHAT_ID');
     }
 
-    const result = await chatService.deleteChat(chatId, getUserId(authReq));
+    const result = await chatService.remove(chatId, getUserId(authReq));
 
     return respondData(res, result, 'Chat deleted successfully');
   }),
@@ -155,7 +155,7 @@ export const chatController = {
       throw ApiError.badRequest('Chat ID is required', 'MISSING_CHAT_ID');
     }
 
-    const chat = await chatService.updateChatTitle(
+    const chat = await chatService.updateTitle(
       chatId,
       getUserId(authReq),
       req.body.title
