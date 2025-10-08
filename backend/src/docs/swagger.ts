@@ -5,8 +5,8 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Learning Platform API',
-      version: '1.0.0',
+      title: config.app.name,
+      version: config.app.version,
       description: 'AI-powered learning platform with PDF processing, RAG chat, and quiz generation',
       contact: {
         name: 'API Support',

@@ -1,5 +1,6 @@
 import rateLimit from 'express-rate-limit';
 import logger from '../utils/logger';
+import config from '../config/env';
 
 interface RateLimitConfig {
   windowMs: number;
@@ -35,18 +36,12 @@ const createRateLimiter = (config: RateLimitConfig) => {
   });
 };
 
-// Rate limiter configurations with environment variable support
-const RATE_LIMIT_WINDOW_MS = parseInt(process.env['RATE_LIMIT_WINDOW_MS'] || '900000'); // 15 minutes default
-const AUTH_MAX_REQUESTS = parseInt(process.env['AUTH_MAX_REQUESTS'] || '5');
-const STANDARD_MAX_REQUESTS = parseInt(process.env['STANDARD_MAX_REQUESTS'] || '100');
-const READ_MAX_REQUESTS = parseInt(process.env['READ_MAX_REQUESTS'] || '200');
-const UPLOAD_WINDOW_MS = parseInt(process.env['UPLOAD_WINDOW_MS'] || '3600000'); // 1 hour default
-const UPLOAD_MAX_REQUESTS = parseInt(process.env['UPLOAD_MAX_REQUESTS'] || '10');
+// Rate limiter configurations using consolidated config
 
 // Strict rate limiter for authentication endpoints
 export const authLimiter = createRateLimiter({
-  windowMs: RATE_LIMIT_WINDOW_MS,
-  max: AUTH_MAX_REQUESTS,
+  windowMs: config.rateLimit.windowMs,
+  max: config.rateLimit.authMax,
   message: 'Too many authentication attempts, please try again later',
   errorCode: 'RATE_LIMIT_EXCEEDED',
   logMessage: 'Authentication rate limit exceeded'
@@ -54,8 +49,8 @@ export const authLimiter = createRateLimiter({
 
 // Standard rate limiter for most endpoints
 export const standardLimiter = createRateLimiter({
-  windowMs: RATE_LIMIT_WINDOW_MS,
-  max: STANDARD_MAX_REQUESTS,
+  windowMs: config.rateLimit.windowMs,
+  max: config.rateLimit.standardMax,
   message: 'Too many requests, please try again later',
   errorCode: 'RATE_LIMIT_EXCEEDED',
   logMessage: 'Standard rate limit exceeded'
@@ -63,8 +58,8 @@ export const standardLimiter = createRateLimiter({
 
 // Generous rate limiter for read-only endpoints
 export const readLimiter = createRateLimiter({
-  windowMs: RATE_LIMIT_WINDOW_MS,
-  max: READ_MAX_REQUESTS,
+  windowMs: config.rateLimit.windowMs,
+  max: config.rateLimit.readMax,
   message: 'Too many requests, please try again later',
   errorCode: 'RATE_LIMIT_EXCEEDED',
   logMessage: 'Read-only rate limit exceeded'
@@ -72,8 +67,8 @@ export const readLimiter = createRateLimiter({
 
 // File upload limiter
 export const uploadLimiter = createRateLimiter({
-  windowMs: UPLOAD_WINDOW_MS,
-  max: UPLOAD_MAX_REQUESTS,
+  windowMs: config.rateLimit.uploadWindowMs,
+  max: config.rateLimit.uploadMax,
   message: 'Upload limit exceeded, please try again later',
   errorCode: 'UPLOAD_LIMIT_EXCEEDED',
   logMessage: 'Upload rate limit exceeded'

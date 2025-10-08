@@ -1,22 +1,42 @@
-import llmConfig from '../config/llm';
+import config from '../config/env';
 import logger from '../utils/logger';
 import ApiError from '../utils/apiError';
 import { ContextChunk, ChatMessage, GenerationOptions, MAX_CHAT_HISTORY } from '../types/chat';
+import { HfInference } from '@huggingface/inference';
 
 /**
  * LLM Service for handling Hugging Face API calls
  * Provides text generation and streaming capabilities for RAG pipeline
  */
 class LLMService {
-  private client: any = null;
+  private client: HfInference | null = null;
   private model: string = '';
+  private defaultParams: {
+    temperature: number;
+    max_tokens: number;
+    top_p: number;
+  };
 
   constructor() {
+    this.model = config.huggingface.model;
+    this.defaultParams = {
+      temperature: config.huggingface.temperature,
+      max_tokens: config.huggingface.maxTokens,
+      top_p: config.huggingface.topP
+    };
+
+    if (!config.huggingface.apiKey) {
+      logger.warn('Hugging Face API key not configured');
+      this.client = null;
+      return;
+    }
+
     try {
-      this.client = llmConfig.getClient();
-      this.model = llmConfig.getModel();
+      this.client = new HfInference(config.huggingface.apiKey);
+      logger.info(`LLM configured with model: ${this.model}`);
     } catch (error) {
       logger.warn('LLM service initialized without client');
+      this.client = null;
     }
   }
 
@@ -78,7 +98,7 @@ Answer:`;
       }
 
       const params = {
-        ...llmConfig.getDefaultParams(),
+        ...this.defaultParams,
         ...options
       };
 
@@ -115,7 +135,7 @@ Answer:`;
       }
 
       const params = {
-        ...llmConfig.getDefaultParams(),
+        ...this.defaultParams,
         ...options
       };
 

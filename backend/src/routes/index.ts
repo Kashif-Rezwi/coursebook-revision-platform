@@ -1,4 +1,5 @@
 import express from 'express';
+import config from '../config/env';
 import authRoutes from './authRoutes';
 import pdfRoutes from './pdfRoutes';
 import chatRoutes from './chatRoutes';
@@ -37,8 +38,8 @@ router.get('/', (_req, res) => {
     success: true,
     message: 'API information retrieved',
     data: {
-      name: 'Learning Platform API',
-      version: '1.0.0',
+      name: config.app.name,
+      version: config.app.version,
       documentation: '/api/docs',
       health: '/api/health',
       endpoints: {

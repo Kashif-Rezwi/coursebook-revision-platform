@@ -44,8 +44,8 @@ export const getSystemInfo = async (): Promise<SystemInfo> => {
       uptime: os.uptime()
     },
     app: {
-      name: 'Learning Platform API',
-      version: '1.0.0',
+      name: config.app.name,
+      version: config.app.version,
       environment: config.env
     }
   };

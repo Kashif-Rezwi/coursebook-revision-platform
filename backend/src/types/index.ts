@@ -17,6 +17,7 @@ export interface Config {
   };
   chromadbHost: string;
   chromadbPort: number;
+  chromadbCollection: string;
   llm: {
     apiKey: string;
     model: string;
@@ -24,9 +25,9 @@ export interface Config {
   huggingface: {
     apiKey: string;
     model: string;
-    temperature?: number;
-    maxTokens?: number;
-    topP?: number;
+    temperature: number;
+    maxTokens: number;
+    topP: number;
   };
   upload: {
     path: string;
@@ -34,6 +35,18 @@ export interface Config {
   };
   corsOrigin: string;
   logLevel: string;
+  rateLimit: {
+    windowMs: number;
+    authMax: number;
+    standardMax: number;
+    readMax: number;
+    uploadWindowMs: number;
+    uploadMax: number;
+  };
+  app: {
+    name: string;
+    version: string;
+  };
 }
 
 // API Response interfaces

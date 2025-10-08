@@ -19,7 +19,7 @@ const initChromaDB = async (): Promise<ChromaCollection | null> => {
     
     // Get or create collection
     collection = await client.getOrCreateCollection({
-      name: 'pdf_embeddings',
+      name: config.chromadbCollection,
       metadata: { description: 'PDF chunk embeddings for RAG' }
     });
     
