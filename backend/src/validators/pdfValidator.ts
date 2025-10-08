@@ -1,24 +1,21 @@
 import Joi from 'joi';
+import { 
+  createIdParamSchema, 
+  createPaginationSchema, 
+  pdfStatusSchema,
+  sortBySchema 
+} from './common';
 
 /**
- * Validation schema for GET /pdfs query parameters
+ * Simplified PDF validation schemas
+ * Uses common validation utilities for consistency
  */
-export const getPDFsSchema = Joi.object({
-  query: Joi.object({
-    status: Joi.string().valid('uploading', 'processing', 'ready', 'failed'),
-    limit: Joi.number().integer().min(1).max(100).default(50),
-    skip: Joi.number().integer().min(0).default(0),
-    sortBy: Joi.string().valid('createdAt', '-createdAt', 'originalName', '-originalName').default('-createdAt')
-  })
-});
 
-/**
- * Validation schema for PDF ID parameter (MongoDB ObjectId format)
- */
-export const pdfIdSchema = Joi.object({
-  params: Joi.object({
-    pdfId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
-      'string.pattern.base': 'Invalid PDF ID format'
-    })
+export const getPDFsSchema = createPaginationSchema(
+  Joi.object({
+    status: pdfStatusSchema.optional(),
+    sortBy: sortBySchema(['createdAt', 'originalName'])
   })
-});
+);
+
+export const pdfIdSchema = createIdParamSchema('pdfId');

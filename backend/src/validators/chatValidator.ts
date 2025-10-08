@@ -1,93 +1,62 @@
 import Joi from 'joi';
-import { MAX_PDFS_PER_CHAT, MIN_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH } from '../types/chat';
+import { 
+  createRequestSchema, 
+  createIdParamSchema, 
+  createPaginationSchema, 
+  objectIdSchema,
+  titleSchema,
+  messageSchema,
+  objectIdArraySchema,
+  sortBySchema
+} from './common';
 
 /**
- * Joi validation schema for creating a new chat
+ * Simplified chat validation schemas
+ * Uses common validation utilities for consistency
  */
-const createChatSchema = Joi.object({
+
+const createChatSchema = createRequestSchema({
   body: Joi.object({
-    title: Joi.string().trim().min(1).max(100).default('New Chat').messages({
-      'string.min': 'Title cannot be empty',
+    title: titleSchema.max(100).default('New Chat').messages({
       'string.max': 'Title cannot exceed 100 characters'
     }),
-    pdfIds: Joi.array().items(
-      Joi.string().regex(/^[0-9a-fA-F]{24}$/).messages({
-        'string.pattern.base': 'Invalid PDF ID format'
-      })
-    ).min(1).max(MAX_PDFS_PER_CHAT).messages({
+    pdfIds: objectIdArraySchema(1, 5).messages({
       'array.min': 'At least one PDF must be selected',
-      'array.max': `Maximum ${MAX_PDFS_PER_CHAT} PDFs allowed per chat`
+      'array.max': 'Maximum 5 PDFs allowed per chat'
     })
-  }),
-  query: Joi.object({}).optional(),
-  params: Joi.object({}).optional()
+  })
 });
 
-/**
- * Joi validation schema for sending a message
- */
-const sendMessageSchema = Joi.object({
+const sendMessageSchema = createRequestSchema({
   body: Joi.object({
-    message: Joi.string().trim().required().min(MIN_MESSAGE_LENGTH).max(MAX_MESSAGE_LENGTH).messages({
-      'any.required': 'Message is required',
-      'string.empty': 'Message cannot be empty',
-      'string.min': `Message must be at least ${MIN_MESSAGE_LENGTH} characters`,
-      'string.max': `Message cannot exceed ${MAX_MESSAGE_LENGTH} characters`
+    message: messageSchema.max(5000).messages({
+      'string.max': 'Message cannot exceed 5000 characters'
     }),
     streaming: Joi.boolean().default(false)
   }),
   params: Joi.object({
-    chatId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
-      'string.pattern.base': 'Invalid chat ID format'
-    })
-  }),
-  query: Joi.object({}).optional()
+    chatId: objectIdSchema
+  })
 });
 
-/**
- * Joi validation schema for getting user chats with pagination
- */
-const getChatsSchema = Joi.object({
-  query: Joi.object({
-    limit: Joi.number().integer().min(1).max(100).default(50),
-    skip: Joi.number().integer().min(0).default(0),
-    sortBy: Joi.string().valid('createdAt', '-createdAt', 'updatedAt', '-updatedAt').default('-updatedAt')
-  }),
-  body: Joi.object({}).optional(),
-  params: Joi.object({}).optional()
-});
+const getChatsSchema = createPaginationSchema(
+  Joi.object({
+    sortBy: sortBySchema(['createdAt', 'updatedAt'])
+  })
+);
 
-/**
- * Joi validation schema for chat ID parameter validation
- */
-const chatIdSchema = Joi.object({
-  params: Joi.object({
-    chatId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
-      'string.pattern.base': 'Invalid chat ID format'
-    })
-  }),
-  body: Joi.object({}).optional(),
-  query: Joi.object({}).optional()
-});
+const chatIdSchema = createIdParamSchema('chatId');
 
-/**
- * Joi validation schema for updating chat title
- */
-const updateChatTitleSchema = Joi.object({
+const updateChatTitleSchema = createRequestSchema({
   body: Joi.object({
-    title: Joi.string().trim().required().min(1).max(100).messages({
+    title: titleSchema.max(100).required().messages({
       'any.required': 'Title is required',
-      'string.empty': 'Title cannot be empty',
-      'string.min': 'Title cannot be empty',
       'string.max': 'Title cannot exceed 100 characters'
     })
   }),
   params: Joi.object({
-    chatId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
-      'string.pattern.base': 'Invalid chat ID format'
-    })
-  }),
-  query: Joi.object({}).optional()
+    chatId: objectIdSchema
+  })
 });
 
 export {

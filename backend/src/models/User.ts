@@ -17,26 +17,19 @@ export interface IUser extends Document {
 const userSchema = new Schema<IUser>({
   email: {
     type: String,
-    required: [true, 'Email is required'],
+    required: true,
     unique: true,
     lowercase: true,
-    trim: true,
-    validate: {
-      validator: function(email: string) {
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-      },
-      message: 'Invalid email format'
-    }
+    trim: true
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
-    minlength: [8, 'Password must be at least 8 characters'],
+    required: true,
     select: false
   },
   name: {
     type: String,
-    required: [true, 'Name is required'],
+    required: true,
     trim: true
   },
   role: {

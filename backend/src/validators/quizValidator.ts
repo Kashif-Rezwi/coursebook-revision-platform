@@ -1,49 +1,65 @@
 import Joi from 'joi';
+import { 
+  createRequestSchema, 
+  createIdParamSchema, 
+  createPaginationSchema, 
+  objectIdSchema,
+  optionalObjectIdSchema,
+  titleSchema,
+  difficultySchema,
+  quizStatusSchema,
+  sortBySchema,
+  stringArraySchema
+} from './common';
 
-export const createQuizSchema = Joi.object({
+/**
+ * Simplified quiz validation schemas
+ * Uses common validation utilities for consistency
+ */
+
+export const createQuizSchema = createRequestSchema({
   body: Joi.object({
-    pdfId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
-      'string.pattern.base': 'Invalid PDF ID format',
-      'any.required': 'PDF ID is required'
+    pdfId: objectIdSchema,
+    title: titleSchema.default('New Quiz'),
+    mcqCount: Joi.number().integer().min(0).max(20).default(5).messages({
+      'number.min': 'MCQ count must be at least 0',
+      'number.max': 'MCQ count cannot exceed 20'
     }),
-    title: Joi.string().trim().max(200).default('New Quiz'),
-    mcqCount: Joi.number().integer().min(0).max(20).default(5),
-    saqCount: Joi.number().integer().min(0).max(10).default(3),
-    laqCount: Joi.number().integer().min(0).max(5).default(2),
-    difficulty: Joi.string().valid('easy', 'medium', 'hard').default('medium')
+    saqCount: Joi.number().integer().min(0).max(10).default(3).messages({
+      'number.min': 'SAQ count must be at least 0',
+      'number.max': 'SAQ count cannot exceed 10'
+    }),
+    laqCount: Joi.number().integer().min(0).max(5).default(2).messages({
+      'number.min': 'LAQ count must be at least 0',
+      'number.max': 'LAQ count cannot exceed 5'
+    }),
+    difficulty: difficultySchema
   })
 });
 
-export const submitQuizSchema = Joi.object({
+export const submitQuizSchema = createRequestSchema({
   body: Joi.object({
-    answers: Joi.array().items(Joi.string().required()).required().min(1).messages({
-      'any.required': 'Answers are required',
-      'array.min': 'At least one answer is required'
+    answers: stringArraySchema(1, 50).required().messages({
+      'any.required': 'Answers are required'
     }),
-    timeTaken: Joi.number().integer().min(0).optional()
+    timeTaken: Joi.number().integer().min(0).optional().messages({
+      'number.min': 'Time taken must be at least 0'
+    })
   }),
   params: Joi.object({
-    quizId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required()
+    quizId: objectIdSchema
   })
 });
 
-export const getQuizzesSchema = Joi.object({
-  query: Joi.object({
-    pdfId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).optional(),
-    status: Joi.string().valid('generating', 'ready', 'failed').optional(),
-    limit: Joi.number().integer().min(1).max(100).default(50),
-    skip: Joi.number().integer().min(0).default(0),
-    sortBy: Joi.string().valid('createdAt', '-createdAt', 'title', '-title').default('-createdAt')
+export const getQuizzesSchema = createPaginationSchema(
+  Joi.object({
+    pdfId: optionalObjectIdSchema,
+    status: quizStatusSchema.optional(),
+    sortBy: sortBySchema(['createdAt', 'title'])
   })
-});
+);
 
-export const quizIdSchema = Joi.object({
-  params: Joi.object({
-    quizId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required().messages({
-      'string.pattern.base': 'Invalid quiz ID format'
-    })
-  })
-});
+export const quizIdSchema = createIdParamSchema('quizId');
 
 export default {
   createQuizSchema,

@@ -3,6 +3,7 @@ import embeddingController from '../controllers/embeddingController';
 import authenticate from '../middlewares/authenticate';
 import validate from '../middlewares/requestValidator';
 import Joi from 'joi';
+import { createRequestSchema, createIdParamSchema } from '../validators/common';
 
 const router = express.Router();
 
@@ -13,7 +14,7 @@ router.use(authenticate);
 router.get('/embedding/status', embeddingController.getStatus);
 
 // Test embedding
-const testEmbeddingSchema = Joi.object({
+const testEmbeddingSchema = createRequestSchema({
   body: Joi.object({
     text: Joi.string().optional()
   })
@@ -22,11 +23,7 @@ const testEmbeddingSchema = Joi.object({
 router.post('/embedding/test', validate(testEmbeddingSchema), embeddingController.testEmbedding);
 
 // Get embedding count for a PDF
-const embeddingCountSchema = Joi.object({
-  params: Joi.object({
-    pdfId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required()
-  })
-});
+const embeddingCountSchema = createIdParamSchema('pdfId');
 
 router.get('/embeddings/count/:pdfId', validate(embeddingCountSchema), embeddingController.getEmbeddingCount);
 

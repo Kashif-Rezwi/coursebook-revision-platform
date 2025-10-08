@@ -1,50 +1,25 @@
 import Joi from 'joi';
+import { createRequestSchema, emailSchema, passwordSchema, nameSchema, userRoleSchema } from './common';
 
 /**
- * Joi validation schemas for authentication endpoints
+ * Simplified authentication validation schemas
+ * Uses common validation utilities for consistency
  */
 
-export const registerSchema = Joi.object({
+export const registerSchema = createRequestSchema({
   body: Joi.object({
-    email: Joi.string()
-      .email()
-      .required()
-      .messages({
-        'string.email': 'Please provide a valid email address',
-        'any.required': 'Email is required'
-      }),
-    password: Joi.string()
-      .min(8)
-      .required()
-      .messages({
-        'string.min': 'Password must be at least 8 characters long',
-        'any.required': 'Password is required'
-      }),
-    name: Joi.string()
-      .trim()
-      .required()
-      .messages({
-        'any.required': 'Name is required'
-      }),
-    role: Joi.string()
-      .valid('student', 'admin')
-      .default('student')
+    email: emailSchema,
+    password: passwordSchema,
+    name: nameSchema,
+    role: userRoleSchema
   })
 });
 
-export const loginSchema = Joi.object({
+export const loginSchema = createRequestSchema({
   body: Joi.object({
-    email: Joi.string()
-      .email()
-      .required()
-      .messages({
-        'string.email': 'Please provide a valid email address',
-        'any.required': 'Email is required'
-      }),
-    password: Joi.string()
-      .required()
-      .messages({
-        'any.required': 'Password is required'
-      })
+    email: emailSchema,
+    password: Joi.string().required().messages({
+      'any.required': 'Password is required'
+    })
   })
 });
