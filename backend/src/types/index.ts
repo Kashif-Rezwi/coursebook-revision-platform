@@ -18,16 +18,17 @@ export interface Config {
   chromadbHost: string;
   chromadbPort: number;
   chromadbCollection: string;
-  llm: {
+  ai: {
     apiKey: string;
-    model: string;
-  };
-  huggingface: {
-    apiKey: string;
-    model: string;
-    temperature: number;
-    maxTokens: number;
-    topP: number;
+    textGeneration: {
+      model: string;
+      temperature: number;
+      maxTokens: number;
+      topP: number;
+    };
+    embeddings: {
+      model: string;
+    };
   };
   upload: {
     path: string;

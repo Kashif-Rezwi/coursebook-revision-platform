@@ -1,5 +1,4 @@
-import embeddingService from './embeddingService';
-import llmService from './llmService';
+import aiService from './aiService';
 import { chromaHelper } from '../utils/chromaHelper';
 import { extractCitations } from '../utils/citationExtractor';
 import { PDF } from '../models';
@@ -50,18 +49,18 @@ class RAGService {
       const enrichedContext = await this.enrichContextWithPageNumbers(contextChunks, pdfIds);
 
       // Step 3: Build prompt
-      const prompt = llmService.buildRAGPrompt(query, enrichedContext, chatHistory);
+      const prompt = aiService.buildRAGPrompt(query, enrichedContext, chatHistory);
 
       // Step 4: Generate response
       if (streaming) {
         // Return generator for streaming
         return {
-          stream: llmService.generateStreamingResponse(prompt),
+          stream: aiService.generateStreamingText(prompt),
           contextChunks: enrichedContext,
           citations: []
         };
       } else {
-        const answer = await llmService.generateResponse(prompt);
+        const answer = await aiService.generateText(prompt);
         
         // Step 5: Extract citations
         const citations = extractCitations(answer, enrichedContext);
@@ -90,30 +89,30 @@ class RAGService {
   async retrieveContext(query: string, pdfIds: string[] | null, limit: number = 5): Promise<ContextChunk[]> {
     try {
       // Generate query embedding
-      const queryEmbedding = await embeddingService.generateEmbedding(query);
+      const queryEmbedding = await aiService.generateEmbedding(query);
 
-      // Search ChromaDB
-      const results = await chromaHelper.queryEmbeddings(
-        queryEmbedding,
-        pdfIds,
-        limit
-      );
+      // Search ChromaDB with the embedding
+      const results = await chromaHelper.queryEmbeddings(queryEmbedding, pdfIds, limit);
 
-      // Convert ChromaDB results to context chunks
-      const contextChunks: ContextChunk[] = results.map(result => ({
-        document: result.document,
-        metadata: {
-          pdfId: result.metadata.pdfId,
-          chunkIndex: result.metadata.chunkIndex,
-          startChar: result.metadata.startChar
-        }
-      }));
-
-      return contextChunks;
+      return this.convertToContextChunks(results);
     } catch (error) {
       logger.error('Context retrieval failed:', error);
       throw ApiError.internal('Failed to retrieve context', 'CONTEXT_RETRIEVAL_ERROR');
     }
+  }
+
+  /**
+   * Convert ChromaDB results to context chunks
+   */
+  private convertToContextChunks(results: any[]): ContextChunk[] {
+    return results.map(result => ({
+      document: result.document,
+      metadata: {
+        pdfId: result.metadata.pdfId,
+        chunkIndex: result.metadata.chunkIndex,
+        startChar: result.metadata.startChar
+      }
+    }));
   }
 
   /**

@@ -1,11 +1,12 @@
 import mongoose from 'mongoose';
 import { logger } from '../utils/logger';
 import config from './env';
+import { TIMEOUTS } from './timeouts';
 
 const options = {
   maxPoolSize: 10,
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000,
+  serverSelectionTimeoutMS: TIMEOUTS.DATABASE_SELECTION,
+  socketTimeoutMS: TIMEOUTS.DATABASE_SOCKET,
 };
 
 /**

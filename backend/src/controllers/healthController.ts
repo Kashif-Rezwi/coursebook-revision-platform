@@ -6,6 +6,7 @@ import { quizQueue } from '../queues/quizGenerationQueue';
 import { success } from '../utils/apiResponse';
 import { asyncHandler } from '../utils/asyncHandler';
 import { getSystemInfo } from '../utils/systemInfo';
+import aiService from '../services/aiService';
 
 /**
  * Utility function to add timeout to promises
@@ -40,11 +41,12 @@ export const healthController = {
   // Detailed health check with all services
   detailedHealth: asyncHandler(async (_req: Request, res: Response) => {
     // Run independent checks in parallel for better performance
-    const [database, chromadb, redis, queues] = await Promise.all([
+    const [database, chromadb, redis, queues, aiService] = await Promise.all([
       checkDatabase(),
       checkChromaDB(),
       checkRedis(),
-      checkQueues()
+      checkQueues(),
+      checkAIService()
     ]);
 
     const checks = {
@@ -52,7 +54,8 @@ export const healthController = {
       database,
       chromadb,
       redis,
-      queues
+      queues,
+      aiService
     };
 
     const allHealthy = Object.values(checks).every(
@@ -176,6 +179,37 @@ async function checkQueues(): Promise<HealthCheck> {
     return {
       status: 'error',
       message: error.message
+    };
+  }
+}
+
+async function checkAIService(): Promise<HealthCheck> {
+  try {
+    const healthStatus = aiService.getHealthStatus();
+    
+    if (healthStatus.status === 'healthy') {
+      return {
+        status: 'ok',
+        message: 'AI Service operational',
+        ...healthStatus.details
+      };
+    } else if (healthStatus.status === 'degraded') {
+      return {
+        status: 'warning',
+        message: 'AI Service degraded - circuit breakers may be open',
+        ...healthStatus.details
+      };
+    } else {
+      return {
+        status: 'error',
+        message: 'AI Service unhealthy',
+        ...healthStatus.details
+      };
+    }
+  } catch (error: any) {
+    return {
+      status: 'error',
+      message: `AI Service error: ${error.message}`
     };
   }
 }

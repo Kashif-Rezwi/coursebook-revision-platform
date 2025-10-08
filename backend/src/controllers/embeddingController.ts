@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import embeddingService from '../services/embeddingService';
+import aiService from '../services/aiService';
 import { chromaHelper } from '../utils/chromaHelper';
 import { success } from '../utils/apiResponse';
 import { asyncHandler } from '../utils/asyncHandler';
@@ -10,11 +10,12 @@ export const embeddingController = {
    * Get embedding service status
    */
   getStatus: asyncHandler(async (_req: Request, res: Response) => {
-    const method = embeddingService.getCurrentMethod();
+    const healthStatus = aiService.getHealthStatus();
     
     return success(res, {
-      method,
-      isLLMEnabled: method.includes('LLM'),
+      status: healthStatus.status,
+      models: healthStatus.details.models,
+      circuitBreaker: healthStatus.details.circuitBreakers.huggingFace,
       timestamp: new Date().toISOString()
     }, 'Embedding service status retrieved successfully');
   }),
@@ -26,9 +27,23 @@ export const embeddingController = {
     const { text } = req.body;
     const testText = text || 'This is a test sentence for embedding generation.';
     
-    const testResult = await embeddingService.testEmbedding(testText);
-    
-    return success(res, testResult, 'Embedding test completed successfully');
+    try {
+      const embedding = await aiService.generateEmbedding(testText);
+      
+      return success(res, {
+        text: testText,
+        embeddingLength: embedding.length,
+        success: true,
+        timestamp: new Date().toISOString()
+      }, 'Embedding test completed successfully');
+    } catch (error) {
+      return success(res, {
+        text: testText,
+        success: false,
+        error: (error as Error).message,
+        timestamp: new Date().toISOString()
+      }, 'Embedding test failed');
+    }
   }),
 
   /**

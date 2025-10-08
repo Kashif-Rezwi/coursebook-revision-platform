@@ -155,7 +155,7 @@ backend/
 │   │   ├── quizService.ts       # Quiz service
 │   │   ├── progressService.ts   # Progress service
 │   │   ├── ragService.ts        # RAG service
-│   │   └── llmService.ts        # LLM service
+│   │   └── aiService.ts         # Unified AI service
 │   ├── models/                   # Database models
 │   │   ├── User.ts              # User model
 │   │   ├── PDF.ts               # PDF model

@@ -1,7 +1,7 @@
 import Queue from 'bull';
 import { Quiz, PDF } from '../models';
 import { chromaHelper } from '../utils/chromaHelper';
-import llmService from '../services/llmService';
+import aiService from '../services/aiService';
 import { buildMCQGenerationPrompt, buildSAQGenerationPrompt, buildLAQGenerationPrompt } from '../utils/quizPrompts';
 import { logger } from '../utils/logger';
 import { getCollection } from '../config/chromadb';
@@ -127,7 +127,7 @@ class QuizGenerator {
   async generateMCQs(content: string, count: number, difficulty: 'easy' | 'medium' | 'hard') {
     try {
       const prompt = buildMCQGenerationPrompt(content, count, difficulty);
-      const response = await llmService.generateResponse(prompt);
+      const response = await aiService.generateText(prompt);
       const questions = this.parseQuestionResponse(response, 'MCQ');
       return questions.slice(0, count).map((q: any) => ({ ...q, type: 'MCQ', points: 1 }));
     } catch (error) {
@@ -139,7 +139,7 @@ class QuizGenerator {
   async generateSAQs(content: string, count: number, difficulty: 'easy' | 'medium' | 'hard') {
     try {
       const prompt = buildSAQGenerationPrompt(content, count, difficulty);
-      const response = await llmService.generateResponse(prompt);
+      const response = await aiService.generateText(prompt);
       const questions = this.parseQuestionResponse(response, 'SAQ');
       return questions.slice(0, count).map((q: any) => ({ ...q, type: 'SAQ', options: [], points: 2 }));
     } catch (error) {
@@ -151,7 +151,7 @@ class QuizGenerator {
   async generateLAQs(content: string, count: number, difficulty: 'easy' | 'medium' | 'hard') {
     try {
       const prompt = buildLAQGenerationPrompt(content, count, difficulty);
-      const response = await llmService.generateResponse(prompt);
+      const response = await aiService.generateText(prompt);
       const questions = this.parseQuestionResponse(response, 'LAQ');
       return questions.slice(0, count).map((q: any) => ({ ...q, type: 'LAQ', options: [], points: 5 }));
     } catch (error) {

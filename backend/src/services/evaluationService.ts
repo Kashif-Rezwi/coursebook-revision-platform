@@ -1,4 +1,4 @@
-import llmService from './llmService';
+import aiService from './aiService';
 import { buildAnswerEvaluationPrompt } from '../utils/quizPrompts';
 import { logger } from '../utils/logger';
 import { ApiError } from '../utils/apiError';
@@ -29,7 +29,7 @@ class EvaluationService {
   async evaluateSAQ(question: string, correctAnswer: string, userAnswer: string, points: number = 2): Promise<EvaluationResult> {
     try {
       const prompt = buildAnswerEvaluationPrompt(question, correctAnswer, userAnswer, points);
-      const response = await this.generateWithTimeoutAndRetry(prompt, 2, 20000);
+      const response = await aiService.generateText(prompt);
       const evaluation = this.parseEvaluationResponse(response);
       evaluation.score = Math.min(Math.max(evaluation.score, 0), points);
       evaluation.pointsEarned = evaluation.score;
@@ -37,21 +37,14 @@ class EvaluationService {
       return evaluation;
     } catch (error) {
       logger.error('SAQ evaluation failed:', error);
-      return {
-        isCorrect: false,
-        pointsEarned: 0,
-        score: 0,
-        feedback: 'Unable to evaluate answer automatically. Please review manually.',
-        keyPointsCovered: [],
-        keyPointsMissed: []
-      };
+      return this.getDefaultEvaluationResult();
     }
   }
 
   async evaluateLAQ(question: string, correctAnswer: string, userAnswer: string, points: number = 5): Promise<EvaluationResult> {
     try {
       const prompt = buildAnswerEvaluationPrompt(question, correctAnswer, userAnswer, points);
-      const response = await this.generateWithTimeoutAndRetry(prompt, 2, 30000);
+      const response = await aiService.generateText(prompt);
       const evaluation = this.parseEvaluationResponse(response);
       evaluation.score = Math.min(Math.max(evaluation.score, 0), points);
       evaluation.pointsEarned = evaluation.score;
@@ -59,14 +52,7 @@ class EvaluationService {
       return evaluation;
     } catch (error) {
       logger.error('LAQ evaluation failed:', error);
-      return {
-        isCorrect: false,
-        pointsEarned: 0,
-        score: 0,
-        feedback: 'Unable to evaluate answer automatically. Please review manually.',
-        keyPointsCovered: [],
-        keyPointsMissed: []
-      };
+      return this.getDefaultEvaluationResult();
     }
   }
 
@@ -105,24 +91,15 @@ class EvaluationService {
     }
   }
 
-  private async generateWithTimeoutAndRetry(prompt: string, retries: number, timeoutMs: number): Promise<string> {
-    let lastError: any = null;
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      try {
-        const resp = await Promise.race([
-          llmService.generateResponse(prompt),
-          new Promise<string>((_, reject) => setTimeout(() => reject(new Error('LLM_TIMEOUT')), timeoutMs))
-        ]) as string;
-        return resp;
-      } catch (err) {
-        lastError = err;
-        logger.warn(`LLM generation attempt ${attempt + 1} failed: ${err instanceof Error ? err.message : String(err)}`);
-        if (attempt < retries) {
-          await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
-        }
-      }
-    }
-    throw lastError || new Error('LLM generation failed');
+  private getDefaultEvaluationResult(): EvaluationResult {
+    return {
+      isCorrect: false,
+      pointsEarned: 0,
+      score: 0,
+      feedback: 'Unable to evaluate answer automatically. Please review manually.',
+      keyPointsCovered: [],
+      keyPointsMissed: []
+    };
   }
 
   private tryParseEvaluationJSON(text: string): EvaluationResult | null {

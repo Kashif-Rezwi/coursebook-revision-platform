@@ -89,14 +89,25 @@ class ChromaHelper {
 
       const results = await collection.query(queryParams);
 
+      // Ensure we have results before processing
+      if (!results.ids[0] || results.ids[0].length === 0) {
+        logger.debug('No results found in ChromaDB query');
+        return [];
+      }
+
       logger.debug(`Queried ChromaDB, found ${results.ids[0].length} results`);
 
-      // Format results
+      // Format results with proper null checks
       const formattedResults: ChromaResult[] = results.ids[0].map((id: string, index: number) => ({
         id,
-        document: results.documents[0][index],
-        metadata: results.metadatas[0][index],
-        distance: results.distances[0][index]
+        document: results.documents[0]?.[index] || '',
+        metadata: results.metadatas[0]?.[index] || {
+          pdfId: '',
+          chunkIndex: 0,
+          startChar: 0,
+          endChar: 0
+        },
+        distance: results.distances[0]?.[index] || 0
       }));
 
       return formattedResults;
@@ -146,7 +157,8 @@ class ChromaHelper {
       }
 
       const results = await collection.get({
-        where: { pdfId: pdfId.toString() }
+        where: { pdfId: pdfId.toString() },
+        limit: 10000 // Large limit to get all embeddings for this PDF
       });
 
       return results.ids.length;

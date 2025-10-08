@@ -65,19 +65,18 @@ const config: Config = {
   chromadbPort,
   chromadbCollection: process.env['CHROMADB_COLLECTION'] || 'pdf_embeddings',
   
-  // LLM Configuration
-  llm: {
-    apiKey: process.env['LLM_API_KEY'] || '',
-    model: process.env['LLM_MODEL'] || 'sentence-transformers/all-MiniLM-L6-v2'
-  },
-  
-  // Hugging Face Configuration
-  huggingface: {
-    apiKey: process.env['HUGGINGFACE_API_KEY'] || '',
-    model: process.env['HUGGINGFACE_MODEL'] || 'mistralai/Mistral-7B-Instruct-v0.2',
-    temperature: parseFloat(process.env['HUGGINGFACE_TEMPERATURE'], 0.7),
-    maxTokens: parseInt(process.env['HUGGINGFACE_MAX_TOKENS'], 1024),
-    topP: parseFloat(process.env['HUGGINGFACE_TOP_P'], 0.9)
+  // AI Services Configuration (Hugging Face)
+  ai: {
+    apiKey: process.env['HUGGINGFACE_API_KEY'] || process.env['LLM_API_KEY'] || '',
+    textGeneration: {
+      model: process.env['HUGGINGFACE_MODEL'] || 'mistralai/Mistral-7B-Instruct-v0.2',
+      temperature: parseFloat(process.env['HUGGINGFACE_TEMPERATURE'], 0.7),
+      maxTokens: parseInt(process.env['HUGGINGFACE_MAX_TOKENS'], 1024),
+      topP: parseFloat(process.env['HUGGINGFACE_TOP_P'], 0.9)
+    },
+    embeddings: {
+      model: process.env['EMBEDDING_MODEL'] || 'sentence-transformers/all-MiniLM-L6-v2'
+    }
   },
   
   // File Upload Configuration

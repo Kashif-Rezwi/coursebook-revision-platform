@@ -2,7 +2,7 @@ import Queue from 'bull';
 import { PDF } from '../models';
 import { parsePDF } from '../utils/pdfParser';
 import { chunkText } from '../utils/textChunker';
-import embeddingService from '../services/embeddingService';
+import aiService from '../services/aiService';
 import { chromaHelper } from '../utils/chromaHelper';
 import { logger } from '../utils/logger';
 
@@ -48,9 +48,9 @@ class PDFProcessor {
       logger.info(`PDF ${pdfId}: Created ${chunks.length} chunks`);
 
       // Step 3: Generate embeddings
-      logger.info(`PDF ${pdfId}: Generating embeddings using ${embeddingService.getCurrentMethod()}`);
+      logger.info(`PDF ${pdfId}: Generating embeddings using HuggingFace API`);
       const chunkTexts = chunks.map(chunk => chunk.text);
-      const embeddings = await embeddingService.generateBatchEmbeddings(chunkTexts);
+      const embeddings = await aiService.generateBatchEmbeddings(chunkTexts);
 
       job.progress(70);
       logger.info(`PDF ${pdfId}: Generated ${embeddings.length} embeddings`);

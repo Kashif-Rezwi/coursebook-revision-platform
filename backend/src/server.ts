@@ -3,11 +3,15 @@ import config from './config/env';
 import { logger } from './utils/logger';
 import { connectDB, disconnectDB } from './config/database';
 import { initChromaDB } from './config/chromadb';
+import { GracefulShutdown } from './utils/gracefulShutdown';
 
-// Handle uncaught exceptions
-process.on('uncaughtException', (error: Error) => {
-  logger.error('Uncaught Exception:', error);
-  process.exit(1);
+// Setup graceful shutdown handlers
+GracefulShutdown.setupSignalHandlers();
+
+// Register database cleanup
+GracefulShutdown.register(async () => {
+  await disconnectDB();
+  logger.info('Database disconnected');
 });
 
 // Connect to databases and start server
