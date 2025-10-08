@@ -1,23 +1,53 @@
 import { Request, Response, NextFunction } from 'express';
 import logger from '../utils/logger';
-import { RequestLogger } from '../types';
+
+// Extend Request interface to include id property
+interface RequestWithId extends Request {
+  id?: string;
+}
+
+interface LogData {
+  requestId: string | undefined;
+  method: string;
+  url: string;
+  status: number;
+  responseTime: string;
+  ip: string;
+  userAgent: string;
+  userId?: string;
+}
 
 /**
- * Log request method, URL, status code, and response time.
+ * Request logging middleware with response time tracking
+ * Logs request details and response time for all requests
  */
-const requestLogger: RequestLogger = (req: Request, res: Response, next: NextFunction) => {
+const requestLogger = (req: RequestWithId, res: Response, next: NextFunction): void => {
   const start = Date.now();
 
   res.on('finish', () => {
     const duration = Date.now() - start;
-    const logMessage = `${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`;
+    const logData: LogData = {
+      requestId: req.id,
+      method: req.method,
+      url: req.originalUrl,
+      status: res.statusCode,
+      responseTime: `${duration}ms`,
+      ip: req.ip || req.connection.remoteAddress || 'unknown',
+      userAgent: req.get('user-agent') || 'unknown'
+    };
 
+    // Add user ID if authenticated
+    if (req.user?.userId) {
+      logData.userId = req.user.userId;
+    }
+
+    // Log based on status code
     if (res.statusCode >= 500) {
-      logger.error(logMessage);
+      logger.error('API Error', logData);
     } else if (res.statusCode >= 400) {
-      logger.warn(logMessage);
+      logger.warn('API Warning', logData);
     } else {
-      logger.info(logMessage);
+      logger.info('API Request', logData);
     }
   });
 
@@ -25,5 +55,3 @@ const requestLogger: RequestLogger = (req: Request, res: Response, next: NextFun
 };
 
 export default requestLogger;
-
-
