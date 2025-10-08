@@ -1,6 +1,4 @@
 import { PDF } from '../models';
-import { BaseService, DeleteResult } from './BaseService';
-import pdfRepository from '../repositories/PDFRepository';
 import { addPDFProcessingJob } from '../queues/pdfProcessingQueue';
 import { deleteFile } from '../utils/fileStorage';
 import chromaHelper from '../utils/chromaHelper';
@@ -21,10 +19,7 @@ export interface PDFListResult {
   skip: number;
 }
 
-class PDFService extends BaseService<any> {
-  constructor() {
-    super(PDF, 'PDF');
-  }
+class PDFService {
 
   /**
    * Upload PDF file and create processing job
@@ -32,7 +27,7 @@ class PDFService extends BaseService<any> {
   async upload(file: Express.Multer.File, userId: string): Promise<{pdf: any, jobId: string}> {
     try {
       // Create PDF document
-      const pdf = await this.model.create({
+      const pdf = await PDF.create({
         userId,
         filename: file.filename,
         originalName: file.originalname,
@@ -78,13 +73,56 @@ class PDFService extends BaseService<any> {
    * Get user's PDFs with filtering and pagination
    */
   async getUserPDFs(userId: string, filters: PDFFilters = {}): Promise<PDFListResult> {
-    return pdfRepository.getUserPDFs(userId, filters);
+    const { status, limit = 50, skip = 0, sortBy = '-createdAt', ...otherFilters } = filters;
+    
+    const queryFilters: any = { ...otherFilters };
+    if (status) {
+      queryFilters.status = status;
+    }
+
+    // Optimized field selection for list view
+    const selectFields = 'filename originalName fileSize status pageCount createdAt updatedAt isSeeded';
+    
+    const [pdfs, total] = await Promise.all([
+      PDF.find({ userId, ...queryFilters })
+        .select(selectFields)
+        .sort(sortBy)
+        .limit(limit)
+        .skip(skip)
+        .lean(), // Use lean() for better performance
+      PDF.countDocuments({ userId, ...queryFilters })
+    ]);
+
+    return {
+      pdfs,
+      total,
+      limit,
+      skip
+    };
+  }
+
+  /**
+   * Find PDF by ID with user ownership validation
+   */
+  async findById(pdfId: string, userId: string): Promise<any> {
+    try {
+      const pdf = await PDF.findOne({ _id: pdfId, userId });
+      if (!pdf) {
+        throw ApiError.notFound('PDF not found', 'PDF_NOT_FOUND');
+      }
+      return pdf;
+    } catch (error: any) {
+      if (error.name === 'CastError') {
+        throw ApiError.badRequest('Invalid PDF ID', 'INVALID_ID');
+      }
+      throw error;
+    }
   }
 
   /**
    * Delete PDF and cleanup associated data
    */
-  override async remove(pdfId: string, userId: string): Promise<DeleteResult> {
+  async remove(pdfId: string, userId: string): Promise<{message: string, id: string}> {
     try {
       const pdf = await this.findById(pdfId, userId);
 
@@ -97,7 +135,7 @@ class PDFService extends BaseService<any> {
       await chromaHelper.deleteEmbeddings(pdfId);
 
       // Delete PDF document
-      await this.model.findByIdAndDelete(pdfId);
+      await PDF.findByIdAndDelete(pdfId);
 
       logger.info(`PDF deleted: ${pdfId} by user ${userId}`);
 
@@ -116,7 +154,17 @@ class PDFService extends BaseService<any> {
    */
   async updateStatus(pdfId: string, status: string, error?: string): Promise<any> {
     try {
-      const pdf = await pdfRepository.updateStatus(pdfId, status, error);
+      const updateData: any = { status };
+      if (error) {
+        updateData.processingError = error;
+      }
+
+      const pdf = await PDF.findByIdAndUpdate(
+        pdfId,
+        { $set: updateData },
+        { new: true, runValidators: true }
+      );
+
       if (!pdf) {
         throw ApiError.notFound('PDF not found', 'PDF_NOT_FOUND');
       }
@@ -127,6 +175,13 @@ class PDFService extends BaseService<any> {
       logger.error('PDF status update failed:', error as any);
       throw error;
     }
+  }
+
+  /**
+   * Calculate file size in MB (moved from model virtual)
+   */
+  getFileSizeMB(fileSize: number): string {
+    return (fileSize / (1024 * 1024)).toFixed(2);
   }
 }
 

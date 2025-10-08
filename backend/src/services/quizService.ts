@@ -1,6 +1,4 @@
 import { Quiz, QuizAttempt, Progress } from '../models';
-import { BaseService, DeleteResult } from './BaseService';
-import quizRepository from '../repositories/QuizRepository';
 import { addQuizGenerationJob } from '../queues/quizGenerationQueue';
 import evaluationService from './evaluationService';
 import { calculateQuizScore } from '../utils/scoreCalculator';
@@ -23,10 +21,7 @@ export interface QuizFilters {
   sortBy?: string;
 }
 
-class QuizService extends BaseService<any> {
-  constructor() {
-    super(Quiz, 'Quiz');
-  }
+class QuizService {
 
   /**
    * Create quiz and start generation job
@@ -41,7 +36,7 @@ class QuizService extends BaseService<any> {
         difficulty = 'medium'
       } = options;
 
-      const quiz = await this.model.create({
+      const quiz = await Quiz.create({
         userId,
         pdfId,
         title,
@@ -75,18 +70,62 @@ class QuizService extends BaseService<any> {
    * Get user's quizzes with filtering
    */
   async getUserQuizzes(userId: string, filters: QuizFilters = {}): Promise<any> {
-    return quizRepository.getUserQuizzes(userId, filters);
+    const { pdfId, status, limit = 50, skip = 0, sortBy = '-createdAt', ...otherFilters } = filters;
+    
+    const queryFilters: any = { ...otherFilters };
+    if (pdfId) queryFilters.pdfId = pdfId;
+    if (status) queryFilters.status = status;
+
+    // Optimized field selection for list view
+    const selectFields = 'title pdfId totalQuestions totalPoints status createdAt updatedAt';
+    
+    const [quizzes, total] = await Promise.all([
+      Quiz.find({ userId, ...queryFilters })
+        .select(selectFields)
+        .sort(sortBy)
+        .limit(limit)
+        .skip(skip)
+        .populate('pdfId', 'originalName pageCount status')
+        .lean(), // Use lean() for better performance
+      Quiz.countDocuments({ userId, ...queryFilters })
+    ]);
+
+    return {
+      quizzes,
+      total,
+      limit,
+      skip
+    };
   }
 
   /**
    * Get quiz by ID with optional answers
    */
   async getQuizById(quizId: string, userId: string, includeAnswers: boolean = false): Promise<any> {
-    const quiz = await quizRepository.getQuizById(quizId, userId, includeAnswers);
-    if (!quiz) {
-      throw this.createNotFoundError();
+    try {
+      const quiz = await Quiz.findOne({ _id: quizId, userId })
+        .populate('pdfId', 'originalName pageCount status');
+
+      if (!quiz) {
+        throw ApiError.notFound('Quiz not found', 'QUIZ_NOT_FOUND');
+      }
+
+      if (!includeAnswers && quiz.status === 'ready') {
+        const quizObj = quiz.toObject();
+        quizObj.questions = quizObj.questions.map((q: any) => {
+          const { correctAnswer, ...rest } = q;
+          return rest;
+        });
+        return quizObj;
+      }
+
+      return quiz;
+    } catch (error: any) {
+      if (error.name === 'CastError') {
+        throw ApiError.badRequest('Invalid quiz ID', 'INVALID_ID');
+      }
+      throw error;
     }
-    return quiz;
   }
 
   /**
@@ -153,18 +192,27 @@ class QuizService extends BaseService<any> {
    * Get quiz attempts
    */
   async getAttempts(quizId: string, userId: string): Promise<any[]> {
-    return quizRepository.getQuizAttempts(quizId, userId);
+    try {
+      return await QuizAttempt.find({ quizId, userId })
+        .sort('-completedAt')
+        .select('-answers');
+    } catch (error) {
+      throw error;
+    }
   }
 
   /**
    * Delete quiz and all attempts
    */
-  override async remove(quizId: string, userId: string): Promise<DeleteResult> {
+  async remove(quizId: string, userId: string): Promise<{message: string, id: string}> {
     try {
-      const quiz = await quizRepository.deleteQuizAndAttempts(quizId, userId);
+      const quiz = await Quiz.findOneAndDelete({ _id: quizId, userId });
       if (!quiz) {
-        throw this.createNotFoundError();
+        throw ApiError.notFound('Quiz not found', 'QUIZ_NOT_FOUND');
       }
+
+      // Delete all attempts for this quiz
+      await QuizAttempt.deleteMany({ quizId });
 
       logger.info(`Quiz deleted: ${quizId} by user ${userId}`);
       return { message: 'Quiz deleted successfully', id: quizId };
@@ -183,7 +231,8 @@ class QuizService extends BaseService<any> {
       if (!progress) {
         progress = await Progress.create({ userId });
       }
-      await (progress as any).updateAfterQuiz(attempt, quiz);
+
+      await this.updateAfterQuiz(progress, attempt, quiz);
       logger.info(`Progress updated for user ${userId}`);
     } catch (error) {
       logger.error('Progress update failed:', error);
@@ -191,11 +240,88 @@ class QuizService extends BaseService<any> {
   }
 
   /**
-   * Create standardized not found error
+   * Update progress after quiz completion (moved from model)
    */
-  private createNotFoundError() {
-    return ApiError.notFound('Quiz not found', 'QUIZ_NOT_FOUND');
+  private async updateAfterQuiz(progress: any, quizAttempt: any, quiz: any): Promise<any> {
+    // Update overall stats
+    progress.overallStats.totalQuizzes += 1;
+    progress.overallStats.totalQuestions += quizAttempt.answers.length;
+    progress.overallStats.correctAnswers += quizAttempt.answers.filter((a: any) => a.isCorrect).length;
+    progress.overallStats.averageScore = 
+      ((progress.overallStats.averageScore * (progress.overallStats.totalQuizzes - 1)) + quizAttempt.percentage) / 
+      progress.overallStats.totalQuizzes;
+    
+    if (quizAttempt.timeTaken) {
+      progress.overallStats.totalTimeSpent += quizAttempt.timeTaken;
+    }
+
+    // Update topic performance
+    quiz.questions.forEach((question: any, index: number) => {
+      const answer = quizAttempt.answers[index];
+      const topicIndex = progress.topicPerformance.findIndex((t: any) => t.topic === question.topic);
+
+      if (topicIndex === -1) {
+        // New topic
+        progress.topicPerformance.push({
+          topic: question.topic,
+          totalQuestions: 1,
+          correctAnswers: answer.isCorrect ? 1 : 0,
+          accuracy: answer.isCorrect ? 100 : 0,
+          lastAttemptedAt: new Date()
+        });
+      } else {
+        // Existing topic
+        const topic = progress.topicPerformance[topicIndex];
+        topic.totalQuestions += 1;
+        if (answer.isCorrect) {
+          topic.correctAnswers += 1;
+        }
+        topic.accuracy = (topic.correctAnswers / topic.totalQuestions) * 100;
+        topic.lastAttemptedAt = new Date();
+      }
+    });
+
+    // Calculate weak and strong topics
+    this.calculateWeakAndStrongTopics(progress);
+
+    // Add recent activity
+    progress.recentActivity.unshift({
+      type: 'quiz_completed',
+      description: `Completed quiz: ${quiz.title}`,
+      timestamp: new Date()
+    });
+
+    // Keep only last 20 activities
+    if (progress.recentActivity.length > 20) {
+      progress.recentActivity = progress.recentActivity.slice(0, 20);
+    }
+
+    progress.lastUpdated = new Date();
+    return progress.save();
   }
+
+  /**
+   * Calculate weak and strong topics (moved from model)
+   */
+  private calculateWeakAndStrongTopics(progress: any): void {
+    const sortedTopics = [...progress.topicPerformance]
+      .filter((t: any) => t.totalQuestions >= 3) // Only consider topics with at least 3 questions
+      .sort((a: any, b: any) => a.accuracy - b.accuracy);
+
+    // Weak topics (accuracy < 60%)
+    progress.weakTopics = sortedTopics
+      .filter((t: any) => t.accuracy < 60)
+      .slice(0, 5)
+      .map((t: any) => ({ topic: t.topic, accuracy: t.accuracy }));
+
+    // Strong topics (accuracy >= 80%)
+    progress.strongTopics = sortedTopics
+      .filter((t: any) => t.accuracy >= 80)
+      .slice(-5)
+      .reverse()
+      .map((t: any) => ({ topic: t.topic, accuracy: t.accuracy }));
+  }
+
 }
 
 export default new QuizService();

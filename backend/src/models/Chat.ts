@@ -20,7 +20,6 @@ export interface IChat extends Document {
   messages: IMessage[];
   createdAt: Date;
   updatedAt: Date;
-  addMessage(role: 'user' | 'assistant' | 'system', content: string, citations?: ICitation[]): Promise<IChat>;
 }
 
 const chatSchema = new Schema<IChat>({
@@ -77,20 +76,6 @@ chatSchema.pre('save', function(next) {
   next();
 });
 
-// Instance method to add message
-chatSchema.methods['addMessage'] = function(
-  role: 'user' | 'assistant' | 'system', 
-  content: string, 
-  citations: ICitation[] = []
-): Promise<IChat> {
-  (this as any).messages.push({
-    role,
-    content,
-    citations,
-    timestamp: new Date()
-  });
-  return (this as any).save();
-};
 
 // Indexes
 chatSchema.index({ userId: 1, updatedAt: -1 });

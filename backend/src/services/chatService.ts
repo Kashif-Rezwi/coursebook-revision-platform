@@ -1,25 +1,21 @@
 import { Chat } from '../models';
 import { IChat, ICitation } from '../models/Chat';
-import { BaseService } from './BaseService';
-import chatRepository from '../repositories/ChatRepository';
 import CacheService from './CacheService';
+import ApiError from '../utils/apiError';
 import logger from '../utils/logger';
 import { ChatFilters, ChatListResult } from '../types/chat';
 
 /**
  * Chat Service for managing chat sessions and messages
- * Simplified using BaseService and repository pattern
+ * Simplified to work directly with models
  */
-class ChatService extends BaseService<IChat> {
-  constructor() {
-    super(Chat, 'Chat');
-  }
+class ChatService {
 
   /**
    * Create a new chat session
    */
   async createChat(userId: string, title: string = 'New Chat', pdfIds: string[] = []): Promise<IChat> {
-    const chat = await this.model.create({
+    const chat = await Chat.create({
       userId,
       title,
       pdfIds,
@@ -34,13 +30,34 @@ class ChatService extends BaseService<IChat> {
    * Get user's chat sessions with pagination
    */
   async getUserChats(userId: string, filters: ChatFilters = {}): Promise<ChatListResult> {
-    return chatRepository.getUserChats(userId, filters);
+    const { limit = 50, skip = 0, sortBy = '-updatedAt', ...otherFilters } = filters;
+
+    // Optimized field selection for list view
+    const selectFields = 'title pdfIds createdAt updatedAt';
+    
+    const [chats, total] = await Promise.all([
+      Chat.find({ userId, ...otherFilters })
+        .select(selectFields)
+        .sort(sortBy)
+        .limit(limit)
+        .skip(skip)
+        .populate('pdfIds', 'originalName pageCount status')
+        .lean(), // Use lean() for better performance
+      Chat.countDocuments({ userId, ...otherFilters })
+    ]);
+
+    return {
+      chats,
+      total,
+      limit,
+      skip
+    };
   }
 
   /**
    * Get a single chat by ID with full message history
    */
-  override async findById(chatId: string, userId: string): Promise<IChat> {
+  async findById(chatId: string, userId: string): Promise<IChat> {
     // Check cache first
     const cacheKey = `chat:${chatId}:${userId}`;
     const cachedChat = CacheService.get<IChat>(cacheKey);
@@ -49,16 +66,25 @@ class ChatService extends BaseService<IChat> {
       return cachedChat;
     }
 
-    const chat = await chatRepository.getChatWithMessages(chatId, userId);
-    if (!chat) {
-      throw this.createNotFoundError();
+    try {
+      const chat = await Chat.findOne({ _id: chatId, userId })
+        .populate('pdfIds', 'originalName pageCount status metadata');
+
+      if (!chat) {
+        throw ApiError.notFound('Chat not found', 'CHAT_NOT_FOUND');
+      }
+
+      // Cache the result for 30 minutes
+      CacheService.set(cacheKey, chat, 1800);
+      logger.debug(`Chat ${chatId} cached`);
+
+      return chat;
+    } catch (error: any) {
+      if (error.name === 'CastError') {
+        throw ApiError.badRequest('Invalid chat ID', 'INVALID_ID');
+      }
+      throw error;
     }
-
-    // Cache the result for 30 minutes
-    CacheService.set(cacheKey, chat, 1800);
-    logger.debug(`Chat ${chatId} cached`);
-
-    return chat;
   }
 
   /**
@@ -71,39 +97,81 @@ class ChatService extends BaseService<IChat> {
     content: string, 
     citations: ICitation[] = []
   ): Promise<IChat> {
-    const chat = await chatRepository.addMessage(chatId, userId, role, content, citations);
-    if (!chat) {
-      throw this.createNotFoundError();
+    try {
+      const chat = await Chat.findOne({ _id: chatId, userId });
+      if (!chat) {
+        throw ApiError.notFound('Chat not found', 'CHAT_NOT_FOUND');
+      }
+
+      // Add message directly to the chat document
+      chat.messages.push({
+        role,
+        content,
+        citations,
+        timestamp: new Date()
+      });
+
+      // Save the updated chat
+      await chat.save();
+
+      // Invalidate cache for this chat
+      const cacheKey = `chat:${chatId}:${userId}`;
+      CacheService.delete(cacheKey);
+      logger.debug(`Cache invalidated for chat ${chatId}`);
+
+      logger.info(`Message added to chat ${chatId} by ${role}`);
+      return chat;
+    } catch (error: any) {
+      if (error.name === 'CastError') {
+        throw ApiError.badRequest('Invalid chat ID', 'INVALID_ID');
+      }
+      throw error;
     }
-
-    // Invalidate cache for this chat
-    const cacheKey = `chat:${chatId}:${userId}`;
-    CacheService.delete(cacheKey);
-    logger.debug(`Cache invalidated for chat ${chatId}`);
-
-    logger.info(`Message added to chat ${chatId} by ${role}`);
-    return chat;
   }
 
   /**
    * Update chat title
    */
   async updateTitle(chatId: string, userId: string, title: string): Promise<IChat> {
-    const chat = await chatRepository.updateTitle(chatId, userId, title);
-    if (!chat) {
-      throw this.createNotFoundError();
-    }
+    try {
+      const chat = await Chat.findOneAndUpdate(
+        { _id: chatId, userId },
+        { $set: { title } },
+        { new: true, runValidators: true }
+      );
 
-    logger.info(`Chat title updated: ${chatId}`);
-    return chat;
+      if (!chat) {
+        throw ApiError.notFound('Chat not found', 'CHAT_NOT_FOUND');
+      }
+
+      logger.info(`Chat title updated: ${chatId}`);
+      return chat;
+    } catch (error: any) {
+      if (error.name === 'CastError') {
+        throw ApiError.badRequest('Invalid chat ID', 'INVALID_ID');
+      }
+      throw error;
+    }
   }
 
   /**
-   * Create standardized not found error
+   * Delete chat session
    */
-  private createNotFoundError() {
-    const ApiError = require('../utils/apiError').default;
-    return ApiError.notFound('Chat not found', 'CHAT_NOT_FOUND');
+  async remove(chatId: string, userId: string): Promise<{message: string, id: string}> {
+    try {
+      const chat = await Chat.findOneAndDelete({ _id: chatId, userId });
+      if (!chat) {
+        throw ApiError.notFound('Chat not found', 'CHAT_NOT_FOUND');
+      }
+
+      logger.info(`Chat deleted: ${chatId} by user ${userId}`);
+      return { message: 'Chat deleted successfully', id: chatId };
+    } catch (error: any) {
+      if (error.name === 'CastError') {
+        throw ApiError.badRequest('Invalid chat ID', 'INVALID_ID');
+      }
+      throw error;
+    }
   }
 }
 

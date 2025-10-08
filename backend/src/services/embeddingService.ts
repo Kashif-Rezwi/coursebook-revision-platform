@@ -87,6 +87,13 @@ class EmbeddingService {
   }
 
   /**
+   * Get current embedding method
+   */
+  getCurrentMethod(): string {
+    return 'LLM (Hugging Face)';
+  }
+
+  /**
    * Test embedding generation with a sample text
    */
   async testEmbedding(text: string = 'This is a test sentence for embedding generation.'): Promise<{
@@ -96,7 +103,7 @@ class EmbeddingService {
   }> {
     const embedding = await this.generateEmbedding(text);
     return {
-      method: 'LLM (Hugging Face)',
+      method: this.getCurrentMethod(),
       dimensions: embedding.length,
       embedding: embedding.slice(0, 10) // Return first 10 values for preview
     };

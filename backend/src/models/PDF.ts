@@ -24,7 +24,6 @@ export interface IPDF extends Document {
   isSeeded: boolean;
   createdAt: Date;
   updatedAt: Date;
-  fileSizeMB: number;
 }
 
 const pdfSchema = new Schema<IPDF>({
@@ -100,10 +99,6 @@ pdfSchema.pre('save', function(next) {
   next();
 });
 
-// Virtual for file size in MB
-pdfSchema.virtual('fileSizeMB').get(function() {
-  return (this.fileSize / (1024 * 1024)).toFixed(2);
-});
 
 // Indexes
 pdfSchema.index({ userId: 1, status: 1 });
