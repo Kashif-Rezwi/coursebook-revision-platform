@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import embeddingService from '../services/embeddingService';
-import chromaHelper from '../utils/chromaHelper';
-import { respondData } from '../utils/apiResponse';
-import asyncHandler from '../utils/asyncHandler';
+import { chromaHelper } from '../utils/chromaHelper';
+import { success } from '../utils/apiResponse';
+import { asyncHandler } from '../utils/asyncHandler';
 import { getParam } from '../utils/requestHelpers';
 
 export const embeddingController = {
@@ -12,7 +12,7 @@ export const embeddingController = {
   getStatus: asyncHandler(async (_req: Request, res: Response) => {
     const method = embeddingService.getCurrentMethod();
     
-    return respondData(res, {
+    return success(res, {
       method,
       isLLMEnabled: method.includes('LLM'),
       timestamp: new Date().toISOString()
@@ -28,7 +28,7 @@ export const embeddingController = {
     
     const testResult = await embeddingService.testEmbedding(testText);
     
-    return respondData(res, testResult, 'Embedding test completed successfully');
+    return success(res, testResult, 'Embedding test completed successfully');
   }),
 
   /**
@@ -39,7 +39,7 @@ export const embeddingController = {
     
     const count = await chromaHelper.getEmbeddingCount(pdfId);
     
-    return respondData(res, {
+    return success(res, {
       pdfId,
       count,
       timestamp: new Date().toISOString()

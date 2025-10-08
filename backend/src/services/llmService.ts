@@ -1,6 +1,6 @@
 import config from '../config/env';
-import logger from '../utils/logger';
-import ApiError from '../utils/apiError';
+import { logger } from '../utils/logger';
+import { ApiError } from '../utils/apiError';
 import { ContextChunk, ChatMessage, GenerationOptions, MAX_CHAT_HISTORY } from '../types/chat';
 import { HfInference } from '@huggingface/inference';
 

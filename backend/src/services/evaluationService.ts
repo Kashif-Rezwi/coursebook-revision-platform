@@ -1,7 +1,7 @@
 import llmService from './llmService';
 import { buildAnswerEvaluationPrompt } from '../utils/quizPrompts';
-import logger from '../utils/logger';
-import ApiError from '../utils/apiError';
+import { logger } from '../utils/logger';
+import { ApiError } from '../utils/apiError';
 
 export interface EvaluationResult {
   isCorrect: boolean;

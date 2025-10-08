@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import logger from '../utils/logger';
-import { errorResponse } from '../utils/apiResponse';
+import { logger } from '../utils/logger';
+import { error } from '../utils/apiResponse';
 import config from '../config/env';
 import { ErrorHandler, ValidationErrorDetail, MulterError } from '../types';
 
@@ -63,7 +63,7 @@ const errorHandler: ErrorHandler = (err: any, req: Request, res: Response, _next
     details = undefined;
   }
 
-  return errorResponse(res, statusCode, message, errorCode, details);
+  return error(res, statusCode, message, errorCode, details);
 };
 
 export default errorHandler;

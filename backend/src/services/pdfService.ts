@@ -1,9 +1,9 @@
 import { PDF } from '../models';
 import { addPDFProcessingJob } from '../queues/pdfProcessingQueue';
 import { deleteFile } from '../utils/fileStorage';
-import chromaHelper from '../utils/chromaHelper';
-import ApiError from '../utils/apiError';
-import logger from '../utils/logger';
+import { chromaHelper } from '../utils/chromaHelper';
+import { ApiError } from '../utils/apiError';
+import { logger } from '../utils/logger';
 
 export interface PDFFilters {
   status?: string;

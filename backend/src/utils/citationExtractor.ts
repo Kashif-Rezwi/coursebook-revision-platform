@@ -1,4 +1,4 @@
-import logger from './logger';
+import { logger } from './logger';
 import { ContextChunk, ICitation } from '../types/chat';
 
 /**

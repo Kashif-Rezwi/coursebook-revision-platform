@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import progressService from '../services/progressService';
-import { respondData } from '../utils/apiResponse';
-import asyncHandler from '../utils/asyncHandler';
+import { success } from '../utils/apiResponse';
+import { asyncHandler } from '../utils/asyncHandler';
 import { AuthenticatedRequest } from '../types/auth';
 import { getUserId, createFilters, getQueryNumber } from '../utils/requestHelpers';
 
@@ -9,51 +9,51 @@ export const progressController = {
   getDashboard: asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
     const dashboard = await progressService.getDashboard(getUserId(authReq));
-    return respondData(res, { dashboard }, 'Dashboard data retrieved successfully');
+    return success(res, { dashboard }, 'Dashboard data retrieved successfully');
   }),
 
   getOverallStats: asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
     const stats = await progressService.getOverallStats(getUserId(authReq));
-    return respondData(res, { stats }, 'Overall statistics retrieved successfully');
+    return success(res, { stats }, 'Overall statistics retrieved successfully');
   }),
 
   getTopicPerformance: asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
     const performance = await progressService.getTopicPerformance(getUserId(authReq));
-    return respondData(res, performance, 'Topic performance retrieved successfully');
+    return success(res, performance, 'Topic performance retrieved successfully');
   }),
 
   getRecentActivity: asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
     const limit = getQueryNumber(req, 'limit', 20) || 20;
     const activity = await progressService.getRecentActivity(getUserId(authReq), limit);
-    return respondData(res, { activity }, 'Recent activity retrieved successfully');
+    return success(res, { activity }, 'Recent activity retrieved successfully');
   }),
 
   getQuizHistory: asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
     const filters = createFilters(req);
     const history = await progressService.getQuizHistory(getUserId(authReq), filters);
-    return respondData(res, history, 'Quiz history retrieved successfully');
+    return success(res, history, 'Quiz history retrieved successfully');
   }),
 
   getPerformanceTrend: asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
     const trend = await progressService.getPerformanceTrend(getUserId(authReq));
-    return respondData(res, trend, 'Performance trend retrieved successfully');
+    return success(res, trend, 'Performance trend retrieved successfully');
   }),
 
   getWeakTopics: asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
     const result = await progressService.getWeakTopics(getUserId(authReq));
-    return respondData(res, result, 'Weak topics retrieved successfully');
+    return success(res, result, 'Weak topics retrieved successfully');
   }),
 
   exportProgress: asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
     const data = await progressService.exportProgressData(getUserId(authReq));
-    return respondData(res, data, 'Progress data exported successfully');
+    return success(res, data, 'Progress data exported successfully');
   })
 };
 

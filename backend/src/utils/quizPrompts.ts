@@ -110,9 +110,4 @@ Provide a fair and constructive evaluation. Return ONLY a valid JSON object with
 }`;
 };
 
-export default {
-  buildMCQGenerationPrompt,
-  buildSAQGenerationPrompt,
-  buildLAQGenerationPrompt,
-  buildAnswerEvaluationPrompt
-};
+// All functions are already exported individually above

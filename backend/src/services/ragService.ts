@@ -1,12 +1,12 @@
 import embeddingService from './embeddingService';
 import llmService from './llmService';
-import chromaHelper from '../utils/chromaHelper';
+import { chromaHelper } from '../utils/chromaHelper';
 import { extractCitations } from '../utils/citationExtractor';
 import { PDF } from '../models';
-import logger from '../utils/logger';
-import ApiError from '../utils/apiError';
+import { logger } from '../utils/logger';
+import { ApiError } from '../utils/apiError';
 import { ContextChunk, ChatMessage, RAGOptions, RAGResult } from '../types/chat';
-import cache from '../utils/cache';
+import CacheService from './CacheService';
 
 /**
  * RAG Service for implementing Retrieval-Augmented Generation pipeline
@@ -132,7 +132,7 @@ class RAGService {
         const uncachedPdfIds: string[] = [];
         for (const pdfId of pdfIds) {
           const cacheKey = `pdf:${pdfId}`;
-          const cachedPdf = cache.getPDF(cacheKey);
+          const cachedPdf = CacheService.get<any>(cacheKey);
           if (cachedPdf) {
             pdfMap[pdfId] = cachedPdf;
           } else {
@@ -147,7 +147,7 @@ class RAGService {
             const pdfId = (pdf._id as any).toString();
             pdfMap[pdfId] = pdf;
             // Cache for 1 hour
-            cache.setPDF(`pdf:${pdfId}`, pdf, 3600);
+            CacheService.set(`pdf:${pdfId}`, pdf, 3600 * 1000);
           });
         }
       }

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import logger from '../utils/logger';
+import { logger } from '../utils/logger';
 
 // Extend Request interface to include id property
 interface RequestWithId extends Request {

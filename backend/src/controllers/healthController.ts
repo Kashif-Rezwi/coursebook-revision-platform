@@ -3,8 +3,8 @@ import { Request, Response } from 'express';
 import { getCollection } from '../config/chromadb';
 import { pdfQueue } from '../queues/pdfProcessingQueue';
 import { quizQueue } from '../queues/quizGenerationQueue';
-import { respondData } from '../utils/apiResponse';
-import asyncHandler from '../utils/asyncHandler';
+import { success } from '../utils/apiResponse';
+import { asyncHandler } from '../utils/asyncHandler';
 import { getSystemInfo } from '../utils/systemInfo';
 
 /**
@@ -30,7 +30,7 @@ interface HealthCheck {
 export const healthController = {
   // Basic health check
   healthCheck: asyncHandler(async (_req: Request, res: Response) => {
-    return respondData(res, {
+    return success(res, {
       status: 'ok',
       timestamp: new Date().toISOString(),
       uptime: process.uptime()
@@ -75,7 +75,7 @@ export const healthController = {
   // System information
   systemInfo: asyncHandler(async (_req: Request, res: Response) => {
     const info = await getSystemInfo();
-    return respondData(res, info, 'System information retrieved');
+    return success(res, info, 'System information retrieved');
   })
 };
 

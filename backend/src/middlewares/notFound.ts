@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import ApiError from '../utils/apiError';
+import { ApiError } from '../utils/apiError';
 import { NotFoundHandler } from '../types';
 
 /**

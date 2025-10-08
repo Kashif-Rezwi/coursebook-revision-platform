@@ -3,12 +3,27 @@ import mongoose from 'mongoose';
 import fs from 'fs';
 import { createQueue } from '../config/queue';
 import pdfProcessor from '../workers/pdfProcessor';
-import logger from '../utils/logger';
-import { getJobStatus, getJobPriority } from '../utils/jobHelper';
-import ApiError from '../utils/apiError';
+import { logger } from '../utils/logger';
+import { ApiError } from '../utils/apiError';
 
 const PDF_PROCESSING_QUEUE = 'pdf-processing';
 const pdfQueue = createQueue(PDF_PROCESSING_QUEUE);
+
+// File size thresholds for job priority
+const FILE_SIZE_THRESHOLDS = {
+  HIGH_PRIORITY: 1000000,    // 1MB
+  MEDIUM_PRIORITY: 5000000,  // 5MB
+  LOW_PRIORITY: 10000000     // 10MB
+};
+
+// Get job priority based on file size
+const getJobPriority = (fileSize: number): number => {
+  // Smaller files get higher priority (lower number = higher priority)
+  if (fileSize < FILE_SIZE_THRESHOLDS.HIGH_PRIORITY) return 1;
+  if (fileSize < FILE_SIZE_THRESHOLDS.MEDIUM_PRIORITY) return 2;
+  if (fileSize < FILE_SIZE_THRESHOLDS.LOW_PRIORITY) return 3;
+  return 4;
+};
 
 // Process jobs
 pdfQueue.process(async (job: Queue.Job) => {
@@ -52,7 +67,23 @@ export const addPDFProcessingJob = async (pdfData: {
 
 // Get job status
 export const getPDFJobStatus = async (jobId: string | number) => {
-  return await getJobStatus(pdfQueue, jobId);
+  const job = await pdfQueue.getJob(jobId);
+  if (!job) {
+    return null;
+  }
+
+  const state = await job.getState();
+  return {
+    id: job.id,
+    state,
+    progress: job.progress(),
+    data: job.data,
+    returnvalue: job.returnvalue,
+    failedReason: job.failedReason,
+    attemptsMade: job.attemptsMade,
+    processedOn: job.processedOn,
+    finishedOn: job.finishedOn
+  };
 };
 
 export { pdfQueue };

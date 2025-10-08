@@ -1,9 +1,9 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../types/auth';
 import pdfService from '../services/pdfService';
-import { respondCreated, respondData } from '../utils/apiResponse';
-import asyncHandler from '../utils/asyncHandler';
-import ApiError from '../utils/apiError';
+import { success } from '../utils/apiResponse';
+import { asyncHandler } from '../utils/asyncHandler';
+import { ApiError } from '../utils/apiError';
 import { getUserId, createFilters, getParam } from '../utils/requestHelpers';
 
 export const pdfController = {
@@ -17,7 +17,7 @@ export const pdfController = {
 
     const result = await pdfService.upload((req as any).file, getUserId(req));
 
-    return respondCreated(res, result, 'PDF uploaded successfully and processing started');
+    return success(res, result, 'PDF uploaded successfully and processing started');
   }),
 
   /**
@@ -27,7 +27,7 @@ export const pdfController = {
     const filters = createFilters(req);
     const result = await pdfService.getUserPDFs(getUserId(req), filters);
 
-    return respondData(res, result, 'PDFs retrieved successfully');
+    return success(res, result, 'PDFs retrieved successfully');
   }),
 
   /**
@@ -37,7 +37,7 @@ export const pdfController = {
     const pdfId = getParam(req, 'pdfId');
     const pdf = await pdfService.findById(pdfId, getUserId(req));
 
-    return respondData(res, { pdf }, 'PDF retrieved successfully');
+    return success(res, { pdf }, 'PDF retrieved successfully');
   }),
 
   /**
@@ -47,7 +47,7 @@ export const pdfController = {
     const pdfId = getParam(req, 'pdfId');
     const result = await pdfService.remove(pdfId, getUserId(req));
 
-    return respondData(res, result, 'PDF deleted successfully');
+    return success(res, result, 'PDF deleted successfully');
   })
 };
 

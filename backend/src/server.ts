@@ -1,6 +1,6 @@
 import app from './app';
 import config from './config/env';
-import logger from './utils/logger';
+import { logger } from './utils/logger';
 import { connectDB, disconnectDB } from './config/database';
 import { initChromaDB } from './config/chromadb';
 

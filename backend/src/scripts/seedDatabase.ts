@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import { connectDB, disconnectDB } from '../config/database';
 import { User, PDF, Progress } from '../models';
-import logger from '../utils/logger';
+import { logger } from '../utils/logger';
 
 const seedDatabase = async (): Promise<void> => {
   try {

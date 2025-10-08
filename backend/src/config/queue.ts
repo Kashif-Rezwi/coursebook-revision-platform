@@ -1,6 +1,6 @@
 import Queue from 'bull';
 import config from './env';
-import logger from '../utils/logger';
+import { logger } from '../utils/logger';
 
 const redisConfig = {
   redis: {

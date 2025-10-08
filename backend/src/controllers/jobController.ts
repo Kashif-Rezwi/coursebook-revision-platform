@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import jobService from '../services/jobService';
-import { respondData } from '../utils/apiResponse';
-import asyncHandler from '../utils/asyncHandler';
-import ApiError from '../utils/apiError';
+import { success } from '../utils/apiResponse';
+import { asyncHandler } from '../utils/asyncHandler';
+import { ApiError } from '../utils/apiError';
 import { getParam, getQuery } from '../utils/requestHelpers';
 
 export const jobController = {
@@ -15,7 +15,7 @@ export const jobController = {
     }
 
     const status = await jobService.getJobStatus(jobId, queueType);
-    return respondData(res, { job: status }, 'Job status retrieved successfully');
+    return success(res, { job: status }, 'Job status retrieved successfully');
   }),
 
   getQueueStats: asyncHandler(async (req: Request, res: Response) => {
@@ -26,7 +26,7 @@ export const jobController = {
     }
 
     const stats = await jobService.getQueueStats(queueType);
-    return respondData(res, { stats }, 'Queue statistics retrieved successfully');
+    return success(res, { stats }, 'Queue statistics retrieved successfully');
   }),
 
   retryJob: asyncHandler(async (req: Request, res: Response) => {
@@ -38,7 +38,7 @@ export const jobController = {
     }
 
     const result = await jobService.retryFailedJob(jobId, queueType);
-    return respondData(res, result, 'Job retry initiated');
+    return success(res, result, 'Job retry initiated');
   })
 };
 

@@ -1,6 +1,6 @@
 import { HfInference } from '@huggingface/inference';
-import logger from '../utils/logger';
-import ApiError from '../utils/apiError';
+import { logger } from '../utils/logger';
+import { ApiError } from '../utils/apiError';
 import config from '../config/env';
 
 class EmbeddingService {

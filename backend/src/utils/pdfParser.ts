@@ -1,7 +1,7 @@
 import fs from 'fs';
 import pdf from 'pdf-parse';
-import logger from './logger';
-import ApiError from './apiError';
+import { logger } from './logger';
+import { ApiError } from './apiError';
 
 export interface PDFParseResult {
   text: string;

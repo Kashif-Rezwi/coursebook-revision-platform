@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import config from '../config/env';
-import ApiError from './apiError';
+import { ApiError } from './apiError';
 import { JWTPayload } from '../types/auth';
 
 /**

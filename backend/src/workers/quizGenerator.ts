@@ -1,9 +1,9 @@
 import Queue from 'bull';
 import { Quiz, PDF } from '../models';
-import chromaHelper from '../utils/chromaHelper';
+import { chromaHelper } from '../utils/chromaHelper';
 import llmService from '../services/llmService';
 import { buildMCQGenerationPrompt, buildSAQGenerationPrompt, buildLAQGenerationPrompt } from '../utils/quizPrompts';
-import logger from '../utils/logger';
+import { logger } from '../utils/logger';
 import { getCollection } from '../config/chromadb';
 
 class QuizGenerator {

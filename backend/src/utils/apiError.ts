@@ -1,6 +1,6 @@
 import { ApiErrorInterface, ValidationErrorDetail } from '../types';
 
-export class ApiError extends Error implements ApiErrorInterface {
+class ApiError extends Error implements ApiErrorInterface {
   public readonly statusCode: number;
   public readonly errorCode: string;
   public readonly isOperational: boolean;
@@ -50,6 +50,6 @@ export class ApiError extends Error implements ApiErrorInterface {
   }
 }
 
-export default ApiError;
+export { ApiError };
 
 

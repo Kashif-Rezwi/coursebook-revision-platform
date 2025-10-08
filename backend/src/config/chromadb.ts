@@ -1,5 +1,5 @@
 import { ChromaClient } from 'chromadb';
-import logger from '../utils/logger';
+import { logger } from '../utils/logger';
 import config from './env';
 
 // Use any type for ChromaDB collection to avoid complex type definitions

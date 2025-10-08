@@ -1,6 +1,6 @@
 import Joi from 'joi';
 import { Request, Response, NextFunction } from 'express';
-import ApiError from '../utils/apiError';
+import { ApiError } from '../utils/apiError';
 import { RequestValidator, ValidationSchema, ValidationErrorDetail } from '../types';
 
 /**

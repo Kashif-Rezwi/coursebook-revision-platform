@@ -2,7 +2,7 @@ import multer from 'multer';
 import fs from 'fs';
 import crypto from 'crypto';
 import config from './env';
-import ApiError from '../utils/apiError';
+import { ApiError } from '../utils/apiError';
 
 // Ensure upload directory exists
 const uploadDir = config.upload.path;

@@ -1,8 +1,8 @@
 import { Chat } from '../models';
 import { IChat, ICitation } from '../models/Chat';
 import CacheService from './CacheService';
-import ApiError from '../utils/apiError';
-import logger from '../utils/logger';
+import { ApiError } from '../utils/apiError';
+import { logger } from '../utils/logger';
 import { ChatFilters, ChatListResult } from '../types/chat';
 
 /**

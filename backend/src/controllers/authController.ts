@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import authService from '../services/authService';
-import { respondCreated, respondData } from '../utils/apiResponse';
-import asyncHandler from '../utils/asyncHandler';
+import { success } from '../utils/apiResponse';
+import { asyncHandler } from '../utils/asyncHandler';
 import { AuthenticatedRequest, RegisterData, LoginData, UpdateProfileData } from '../types/auth';
 import { getUserId } from '../utils/requestHelpers';
 
@@ -14,7 +14,7 @@ export const authController = {
    */
   register: asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const result = await authService.register(req.body as RegisterData);
-    return respondCreated(res, result, 'User registered successfully');
+    return success(res, result, 'User registered successfully');
   }),
 
   /**
@@ -23,7 +23,7 @@ export const authController = {
   login: asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { email, password } = req.body as LoginData;
     const result = await authService.login(email, password);
-    return respondData(res, result, 'Login successful');
+    return success(res, result, 'Login successful');
   }),
 
   /**
@@ -31,7 +31,7 @@ export const authController = {
    */
   getProfile: asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const user = await authService.getUserById(getUserId(req));
-    return respondData(res, { user }, 'Profile retrieved successfully');
+    return success(res, { user }, 'Profile retrieved successfully');
   }),
 
   /**
@@ -39,7 +39,7 @@ export const authController = {
    */
   updateProfile: asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const user = await authService.updateProfile(getUserId(req), req.body as UpdateProfileData);
-    return respondData(res, { user }, 'Profile updated successfully');
+    return success(res, { user }, 'Profile updated successfully');
   }),
 
   /**
@@ -48,7 +48,7 @@ export const authController = {
   logout: asyncHandler(async (_req: AuthenticatedRequest, res: Response) => {
     // JWT is stateless, so just return success
     // Client should delete token from storage
-    return respondData(res, null, 'Logout successful');
+    return success(res, null, 'Logout successful');
   })
 };
 

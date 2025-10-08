@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
 import chatService from '../services/chatService';
 import ragService from '../services/ragService';
-import { respondCreated, respondData } from '../utils/apiResponse';
-import asyncHandler from '../utils/asyncHandler';
-import logger from '../utils/logger';
-import ApiError from '../utils/apiError';
+import { success } from '../utils/apiResponse';
+import { asyncHandler } from '../utils/asyncHandler';
+import { logger } from '../utils/logger';
+import { ApiError } from '../utils/apiError';
 import { extractCitations } from '../utils/citationExtractor';
 import { AuthenticatedRequest } from '../types/auth';
 import { getUserId, getParam, createFilters } from '../utils/requestHelpers';
@@ -23,7 +23,7 @@ export const chatController = {
 
     const chat = await chatService.createChat(getUserId(authReq), title, pdfIds);
 
-    return respondCreated(res, { chat }, 'Chat created successfully');
+    return success(res, { chat }, 'Chat created successfully');
   }),
 
   /**
@@ -33,7 +33,7 @@ export const chatController = {
     const authReq = req as AuthenticatedRequest;
     const filters = createFilters(req);
     const result = await chatService.getUserChats(getUserId(authReq), filters);
-    return respondData(res, result, 'Chats retrieved successfully');
+    return success(res, result, 'Chats retrieved successfully');
   }),
 
   /**
@@ -45,7 +45,7 @@ export const chatController = {
 
     const chat = await chatService.findById(chatId, getUserId(authReq));
 
-    return respondData(res, { chat }, 'Chat retrieved successfully');
+    return success(res, { chat }, 'Chat retrieved successfully');
   }),
 
   /**
@@ -122,7 +122,7 @@ export const chatController = {
       result.citations as any
     );
 
-    return respondData(res, {
+    return success(res, {
       answer: result.answer,
       citations: result.citations
     }, 'Message sent successfully');
@@ -141,7 +141,7 @@ export const chatController = {
 
     const result = await chatService.remove(chatId, getUserId(authReq));
 
-    return respondData(res, result, 'Chat deleted successfully');
+    return success(res, result, 'Chat deleted successfully');
   }),
 
   /**
@@ -161,7 +161,7 @@ export const chatController = {
       req.body.title
     );
 
-    return respondData(res, { chat }, 'Chat title updated successfully');
+    return success(res, { chat }, 'Chat title updated successfully');
   })
 };
 

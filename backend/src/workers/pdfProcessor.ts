@@ -3,8 +3,8 @@ import { PDF } from '../models';
 import { parsePDF } from '../utils/pdfParser';
 import { chunkText } from '../utils/textChunker';
 import embeddingService from '../services/embeddingService';
-import chromaHelper from '../utils/chromaHelper';
-import logger from '../utils/logger';
+import { chromaHelper } from '../utils/chromaHelper';
+import { logger } from '../utils/logger';
 
 class PDFProcessor {
   async processPDF(job: Queue.Job) {

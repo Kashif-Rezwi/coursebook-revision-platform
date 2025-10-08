@@ -1,8 +1,8 @@
 import { User, Progress } from '../models';
 import { generateAccessToken } from '../utils/jwtHelper';
 import { validatePasswordStrength } from '../utils/passwordHelper';
-import ApiError from '../utils/apiError';
-import logger from '../utils/logger';
+import { ApiError } from '../utils/apiError';
+import { logger } from '../utils/logger';
 import { RegisterData, UpdateProfileData, LoginResult, UserResponse } from '../types/auth';
 
 /**

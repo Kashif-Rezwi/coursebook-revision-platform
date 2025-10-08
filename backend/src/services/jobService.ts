@@ -1,8 +1,8 @@
 import Queue from 'bull';
 import { pdfQueue } from '../queues/pdfProcessingQueue';
 import { quizQueue } from '../queues/quizGenerationQueue';
-import ApiError from '../utils/apiError';
-import logger from '../utils/logger';
+import { ApiError } from '../utils/apiError';
+import { logger } from '../utils/logger';
 
 class JobService {
   getQueue(queueType: string): Queue.Queue {

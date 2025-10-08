@@ -12,7 +12,7 @@ import {
   WeakTopic,
   StrongTopic,
   LearningStreak
-} from '../utils/analyticsCalculator';
+} from './analyticsService';
 import {
   calculatePerformanceTrend,
   groupAttemptsByDate,
@@ -20,10 +20,10 @@ import {
   PerformanceTrend,
   GroupedAttempt,
   ScorePrediction
-} from '../utils/trendAnalyzer';
+} from './trendAnalysisService';
 import { IQuizAttempt } from '../models/QuizAttempt';
-import ApiError from '../utils/apiError';
-import logger from '../utils/logger';
+import { ApiError } from '../utils/apiError';
+import { logger } from '../utils/logger';
 import CacheService from './CacheService';
 
 export interface DashboardData {

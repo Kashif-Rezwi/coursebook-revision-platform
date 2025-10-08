@@ -4,11 +4,11 @@ import { SuccessResponse, ErrorResponse } from '../types';
 /**
  * Send a standardized success response.
  */
-export const successResponse = (
+export const success = (
   res: Response,
-  statusCode: number,
+  data: any,
   message: string,
-  data: any = null
+  statusCode: number = 200
 ): Response<SuccessResponse> => {
   const response: SuccessResponse = {
     success: true,
@@ -20,27 +20,9 @@ export const successResponse = (
 };
 
 /**
- * Helper function for common success responses
- */
-export const respond = (res: Response, data: any, message: string, statusCode: number = 200) => 
-  successResponse(res, statusCode, message, data);
-
-/**
- * Helper for created responses
- */
-export const respondCreated = (res: Response, data: any, message: string) => 
-  successResponse(res, 201, message, data);
-
-/**
- * Helper for simple data responses
- */
-export const respondData = (res: Response, data: any, message: string) => 
-  successResponse(res, 200, message, data);
-
-/**
  * Send a standardized error response.
  */
-export const errorResponse = (
+export const error = (
   res: Response,
   statusCode: number,
   message: string,
@@ -57,6 +39,5 @@ export const errorResponse = (
   return res.status(statusCode).json(response);
 };
 
-export default { successResponse, respond, respondCreated, respondData, errorResponse };
 
 

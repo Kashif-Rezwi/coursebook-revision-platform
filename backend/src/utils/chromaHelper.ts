@@ -1,6 +1,6 @@
 import { getCollection } from '../config/chromadb';
-import logger from './logger';
-import ApiError from './apiError';
+import { logger } from './logger';
+import { ApiError } from './apiError';
 import { TextChunk } from './textChunker';
 
 export interface ChromaResult {
@@ -157,4 +157,5 @@ class ChromaHelper {
   }
 }
 
-export default new ChromaHelper();
+const chromaHelper = new ChromaHelper();
+export { chromaHelper };

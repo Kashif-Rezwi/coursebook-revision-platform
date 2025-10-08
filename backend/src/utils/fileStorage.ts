@@ -1,6 +1,6 @@
 import fs from 'fs';
-import logger from './logger';
-import ApiError from './apiError';
+import { logger } from './logger';
+import { ApiError } from './apiError';
 
 /**
  * Delete file from filesystem

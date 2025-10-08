@@ -2,9 +2,8 @@ import Queue from 'bull';
 import mongoose from 'mongoose';
 import { createQueue } from '../config/queue';
 import quizGenerator from '../workers/quizGenerator';
-import logger from '../utils/logger';
-import { getJobStatus } from '../utils/jobHelper';
-import ApiError from '../utils/apiError';
+import { logger } from '../utils/logger';
+import { ApiError } from '../utils/apiError';
 
 const QUIZ_GENERATION_QUEUE = 'quiz-generation';
 const quizQueue = createQueue(QUIZ_GENERATION_QUEUE);
@@ -67,7 +66,23 @@ export const addQuizGenerationJob = async (quizData: {
 
 // Get job status
 export const getQuizJobStatus = async (jobId: string | number) => {
-  return await getJobStatus(quizQueue, jobId);
+  const job = await quizQueue.getJob(jobId);
+  if (!job) {
+    return null;
+  }
+
+  const state = await job.getState();
+  return {
+    id: job.id,
+    state,
+    progress: job.progress(),
+    data: job.data,
+    returnvalue: job.returnvalue,
+    failedReason: job.failedReason,
+    attemptsMade: job.attemptsMade,
+    processedOn: job.processedOn,
+    finishedOn: job.finishedOn
+  };
 };
 
 export { quizQueue };
