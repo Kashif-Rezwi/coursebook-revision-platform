@@ -1,92 +1,59 @@
 import { Request, Response } from 'express';
 import chatService from '../services/chatService';
 import ragService from '../services/ragService';
-import { successResponse } from '../utils/apiResponse';
+import { respondCreated, respondData } from '../utils/apiResponse';
 import asyncHandler from '../utils/asyncHandler';
 import logger from '../utils/logger';
 import ApiError from '../utils/apiError';
 import { extractCitations } from '../utils/citationExtractor';
-
-interface AuthenticatedRequest extends Request {
-  user: {
-    userId: string;
-    email: string;
-    role: string;
-    name?: string;
-  };
-}
+import { AuthenticatedRequest } from '../types/auth';
+import { getUserId, getParam, createFilters } from '../utils/requestHelpers';
 
 /**
  * Chat Controller for handling chat-related HTTP requests
  * Provides endpoints for chat management and messaging
  */
-class ChatController {
+export const chatController = {
   /**
    * Create a new chat session
    */
-  createChat = asyncHandler(async (req: Request, res: Response) => {
+  createChat: asyncHandler(async (req: Request, res: Response) => {
     const { title, pdfIds } = req.body;
     const authReq = req as AuthenticatedRequest;
 
-    const chat = await chatService.createChat(authReq.user.userId, title, pdfIds);
+    const chat = await chatService.createChat(getUserId(authReq), title, pdfIds);
 
-    return successResponse(
-      res,
-      201,
-      'Chat created successfully',
-      { chat }
-    );
-  });
+    return respondCreated(res, { chat }, 'Chat created successfully');
+  }),
 
   /**
    * Get user's chat sessions with pagination
    */
-  getUserChats = asyncHandler(async (req: Request, res: Response) => {
+  getUserChats: asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const filters: any = {};
-    if (req.query['limit']) {
-      filters.limit = parseInt(req.query['limit'] as string);
-    }
-    if (req.query['skip']) {
-      filters.skip = parseInt(req.query['skip'] as string);
-    }
-    if (req.query['sortBy']) {
-      filters.sortBy = req.query['sortBy'] as string;
-    }
-
-    const result = await chatService.getUserChats(authReq.user.userId, filters);
-
-    return successResponse(
-      res,
-      200,
-      'Chats retrieved successfully',
-      result
-    );
-  });
+    const filters = createFilters(req);
+    const result = await chatService.getUserChats(getUserId(authReq), filters);
+    return respondData(res, result, 'Chats retrieved successfully');
+  }),
 
   /**
    * Get a single chat with full message history
    */
-  getChat = asyncHandler(async (req: Request, res: Response) => {
+  getChat: asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const chatId = req.params['chatId'] as string;
+    const chatId = getParam(req, 'chatId');
 
-    const chat = await chatService.getChatById(chatId, authReq.user.userId);
+    const chat = await chatService.getChatById(chatId, getUserId(authReq));
 
-    return successResponse(
-      res,
-      200,
-      'Chat retrieved successfully',
-      { chat }
-    );
-  });
+    return respondData(res, { chat }, 'Chat retrieved successfully');
+  }),
 
   /**
    * Send a message and get AI response
    */
-  sendMessage = asyncHandler(async (req: Request, res: Response) => {
+  sendMessage: asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const { chatId } = req.params;
+    const chatId = getParam(req, 'chatId');
     const { message, streaming } = req.body;
 
     if (!chatId) {
@@ -94,10 +61,10 @@ class ChatController {
     }
 
     // Get chat
-    const chat = await chatService.getChatById(chatId, authReq.user.userId);
+    const chat = await chatService.getChatById(chatId, getUserId(authReq));
 
     // Add user message to chat
-    await chatService.addMessage(chatId, authReq.user.userId, 'user', message);
+    await chatService.addMessage(chatId, getUserId(authReq), 'user', message);
 
     // Process query with RAG
     const result = await ragService.processQuery(
@@ -127,7 +94,7 @@ class ChatController {
         // Save assistant message with citations
         await chatService.addMessage(
           chatId,
-          authReq.user.userId,
+          getUserId(authReq),
           'assistant',
           fullResponse,
           citations as any
@@ -149,50 +116,40 @@ class ChatController {
     // Add assistant message to chat
     await chatService.addMessage(
       chatId,
-      authReq.user.userId,
+      getUserId(authReq),
       'assistant',
       result.answer!,
       result.citations as any
     );
 
-    return successResponse(
-      res,
-      200,
-      'Message sent successfully',
-      {
-        answer: result.answer,
-        citations: result.citations
-      }
-    );
-  });
+    return respondData(res, {
+      answer: result.answer,
+      citations: result.citations
+    }, 'Message sent successfully');
+  }),
 
   /**
    * Delete a chat session
    */
-  deleteChat = asyncHandler(async (req: Request, res: Response) => {
+  deleteChat: asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const chatId = req.params['chatId'] as string;
+    const chatId = getParam(req, 'chatId');
 
     if (!chatId) {
       throw ApiError.badRequest('Chat ID is required', 'MISSING_CHAT_ID');
     }
 
-    const result = await chatService.deleteChat(chatId, authReq.user.userId);
+    const result = await chatService.deleteChat(chatId, getUserId(authReq));
 
-    return successResponse(
-      res,
-      200,
-      'Chat deleted successfully',
-      result
-    );
-  });
+    return respondData(res, result, 'Chat deleted successfully');
+  }),
 
   /**
    * Update chat title
    */
-  updateChatTitle = asyncHandler(async (req: Request, res: Response) => {
+  updateChatTitle: asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;
-    const chatId = req.params['chatId'] as string;
+    const chatId = getParam(req, 'chatId');
 
     if (!chatId) {
       throw ApiError.badRequest('Chat ID is required', 'MISSING_CHAT_ID');
@@ -200,17 +157,12 @@ class ChatController {
 
     const chat = await chatService.updateChatTitle(
       chatId,
-      authReq.user.userId,
+      getUserId(authReq),
       req.body.title
     );
 
-    return successResponse(
-      res,
-      200,
-      'Chat title updated successfully',
-      { chat }
-    );
-  });
-}
+    return respondData(res, { chat }, 'Chat title updated successfully');
+  })
+};
 
-export default new ChatController();
+export default chatController;

@@ -1,64 +1,50 @@
 import { Request, Response } from 'express';
 import embeddingService from '../services/embeddingService';
 import chromaHelper from '../utils/chromaHelper';
-import { successResponse } from '../utils/apiResponse';
+import { respondData } from '../utils/apiResponse';
 import asyncHandler from '../utils/asyncHandler';
+import { getParam } from '../utils/requestHelpers';
 
-class EmbeddingController {
+export const embeddingController = {
   /**
    * Get embedding service status
    */
-  getStatus = asyncHandler(async (_req: Request, res: Response) => {
+  getStatus: asyncHandler(async (_req: Request, res: Response) => {
     const method = embeddingService.getCurrentMethod();
     
-    return successResponse(
-      res,
-      200,
-      'Embedding service status retrieved successfully',
-      {
-        method,
-        isLLMEnabled: method.includes('LLM'),
-        timestamp: new Date().toISOString()
-      }
-    );
-  });
+    return respondData(res, {
+      method,
+      isLLMEnabled: method.includes('LLM'),
+      timestamp: new Date().toISOString()
+    }, 'Embedding service status retrieved successfully');
+  }),
 
   /**
    * Test embedding generation
    */
-  testEmbedding = asyncHandler(async (req: Request, res: Response) => {
+  testEmbedding: asyncHandler(async (req: Request, res: Response) => {
     const { text } = req.body;
     const testText = text || 'This is a test sentence for embedding generation.';
     
     const testResult = await embeddingService.testEmbedding(testText);
     
-    return successResponse(
-      res,
-      200,
-      'Embedding test completed successfully',
-      testResult
-    );
-  });
+    return respondData(res, testResult, 'Embedding test completed successfully');
+  }),
 
   /**
    * Get embedding count for a PDF
    */
-  getEmbeddingCount = asyncHandler(async (req: Request, res: Response) => {
-    const pdfId = String(req.params['pdfId']);
+  getEmbeddingCount: asyncHandler(async (req: Request, res: Response) => {
+    const pdfId = getParam(req, 'pdfId');
     
     const count = await chromaHelper.getEmbeddingCount(pdfId);
     
-    return successResponse(
-      res,
-      200,
-      'Embedding count retrieved successfully',
-      {
-        pdfId,
-        count,
-        timestamp: new Date().toISOString()
-      }
-    );
-  });
-}
+    return respondData(res, {
+      pdfId,
+      count,
+      timestamp: new Date().toISOString()
+    }, 'Embedding count retrieved successfully');
+  })
+};
 
-export default new EmbeddingController();
+export default embeddingController;

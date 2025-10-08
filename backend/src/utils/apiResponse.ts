@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { SuccessResponse, ErrorResponse, ValidationErrorDetail } from '../types';
+import { SuccessResponse } from '../types';
 
 /**
  * Send a standardized success response.
@@ -20,27 +20,23 @@ export const successResponse = (
 };
 
 /**
- * Send a standardized error response.
+ * Helper function for common success responses
  */
-export const errorResponse = (
-  res: Response,
-  statusCode: number,
-  message: string,
-  errorCode: string = 'ERROR',
-  details?: ValidationErrorDetail[]
-): Response<ErrorResponse> => {
-  const response: ErrorResponse = {
-    success: false,
-    message,
-    error: {
-      code: errorCode,
-      ...(details && { details })
-    },
-    timestamp: new Date().toISOString()
-  };
-  return res.status(statusCode).json(response);
-};
+export const respond = (res: Response, data: any, message: string, statusCode: number = 200) => 
+  successResponse(res, statusCode, message, data);
 
-export default { successResponse, errorResponse };
+/**
+ * Helper for created responses
+ */
+export const respondCreated = (res: Response, data: any, message: string) => 
+  successResponse(res, 201, message, data);
+
+/**
+ * Helper for simple data responses
+ */
+export const respondData = (res: Response, data: any, message: string) => 
+  successResponse(res, 200, message, data);
+
+export default { successResponse, respond, respondCreated, respondData };
 
 

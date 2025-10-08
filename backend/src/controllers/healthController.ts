@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import { getCollection } from '../config/chromadb';
 import { pdfQueue } from '../queues/pdfProcessingQueue';
 import { quizQueue } from '../queues/quizGenerationQueue';
-import { successResponse } from '../utils/apiResponse';
+import { respondData } from '../utils/apiResponse';
 import asyncHandler from '../utils/asyncHandler';
 import { getSystemInfo } from '../utils/systemInfo';
 
@@ -27,24 +27,24 @@ interface HealthCheck {
   quiz?: any;
 }
 
-class HealthController {
+export const healthController = {
   // Basic health check
-  healthCheck = asyncHandler(async (_req: Request, res: Response) => {
-    return successResponse(res, 200, 'Server is healthy', {
+  healthCheck: asyncHandler(async (_req: Request, res: Response) => {
+    return respondData(res, {
       status: 'ok',
       timestamp: new Date().toISOString(),
       uptime: process.uptime()
-    });
-  });
+    }, 'Server is healthy');
+  }),
 
   // Detailed health check with all services
-  detailedHealth = asyncHandler(async (_req: Request, res: Response) => {
+  detailedHealth: asyncHandler(async (_req: Request, res: Response) => {
     // Run independent checks in parallel for better performance
     const [database, chromadb, redis, queues] = await Promise.all([
-      this.checkDatabase(),
-      this.checkChromaDB(),
-      this.checkRedis(),
-      this.checkQueues()
+      checkDatabase(),
+      checkChromaDB(),
+      checkRedis(),
+      checkQueues()
     ]);
 
     const checks = {
@@ -70,123 +70,124 @@ class HealthController {
         uptime: process.uptime()
       }
     });
-  });
+  }),
 
   // System information
-  systemInfo = asyncHandler(async (_req: Request, res: Response) => {
+  systemInfo: asyncHandler(async (_req: Request, res: Response) => {
     const info = await getSystemInfo();
-    return successResponse(res, 200, 'System information retrieved', info);
-  });
+    return respondData(res, info, 'System information retrieved');
+  })
+};
 
-  private async checkDatabase(): Promise<HealthCheck> {
-    try {
-      const state = mongoose.connection.readyState;
-      // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
-      
-      if (state === 1) {
-        await withTimeout(
-          (mongoose.connection.db?.admin().ping() || Promise.resolve()) as Promise<void>,
-          5000 // 5 second timeout
-        );
-        return {
-          status: 'ok',
-          message: 'MongoDB connected',
-          readyState: 'connected'
-        };
-      }
-      
-      return {
-        status: 'error',
-        message: 'MongoDB not connected',
-        readyState: this.getReadyStateString(state)
-      };
-    } catch (error: any) {
-      return {
-        status: 'error',
-        message: error.message
-      };
-    }
-  }
-
-  private async checkChromaDB(): Promise<HealthCheck> {
-    try {
-      const collection = await withTimeout(
-        getCollection(),
-        3000 // 3 second timeout
+// Helper functions moved outside the controller
+async function checkDatabase(): Promise<HealthCheck> {
+  try {
+    const state = mongoose.connection.readyState;
+    // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+    
+    if (state === 1) {
+      await withTimeout(
+        (mongoose.connection.db?.admin().ping() || Promise.resolve()) as Promise<void>,
+        5000 // 5 second timeout
       );
-      if (collection) {
-        return {
-          status: 'ok',
-          message: 'ChromaDB connected'
-        };
-      }
-      return {
-        status: 'warning',
-        message: 'ChromaDB not initialized'
-      };
-    } catch (error: any) {
-      return {
-        status: 'error',
-        message: error.message
-      };
-    }
-  }
-
-  private async checkRedis(): Promise<HealthCheck> {
-    try {
-      // Check if PDF queue can connect to Redis
-      const client = (pdfQueue as any).client;
-      if (client && client.status === 'ready') {
-        return {
-          status: 'ok',
-          message: 'Redis connected'
-        };
-      }
-      return {
-        status: 'error',
-        message: 'Redis not connected'
-      };
-    } catch (error: any) {
-      return {
-        status: 'error',
-        message: error.message
-      };
-    }
-  }
-
-  private async checkQueues(): Promise<HealthCheck> {
-    try {
-      const [pdfCounts, quizCounts] = await withTimeout(
-        Promise.all([
-          pdfQueue.getJobCounts(),
-          quizQueue.getJobCounts()
-        ]),
-        2000 // 2 second timeout
-      );
-
       return {
         status: 'ok',
-        message: 'Queues operational',
-        pdf: pdfCounts,
-        quiz: quizCounts
-      };
-    } catch (error: any) {
-      return {
-        status: 'error',
-        message: error.message
+        message: 'MongoDB connected',
+        readyState: 'connected'
       };
     }
-  }
-
-  private getReadyStateString(state: number): string {
-    const states = {
-      0: 'disconnected',
-      1: 'connected',
-      2: 'connecting',
-      3: 'disconnecting'
+    
+    return {
+      status: 'error',
+      message: 'MongoDB not connected',
+      readyState: getReadyStateString(state)
     };
-    return states[state as keyof typeof states] || 'unknown';
+  } catch (error: any) {
+    return {
+      status: 'error',
+      message: error.message
+    };
   }
 }
 
-export default new HealthController();
+async function checkChromaDB(): Promise<HealthCheck> {
+  try {
+    const collection = await withTimeout(
+      getCollection(),
+      3000 // 3 second timeout
+    );
+    if (collection) {
+      return {
+        status: 'ok',
+        message: 'ChromaDB connected'
+      };
+    }
+    return {
+      status: 'warning',
+      message: 'ChromaDB not initialized'
+    };
+  } catch (error: any) {
+    return {
+      status: 'error',
+      message: error.message
+    };
+  }
+}
+
+async function checkRedis(): Promise<HealthCheck> {
+  try {
+    // Check if PDF queue can connect to Redis
+    const client = (pdfQueue as any).client;
+    if (client && client.status === 'ready') {
+      return {
+        status: 'ok',
+        message: 'Redis connected'
+      };
+    }
+    return {
+      status: 'error',
+      message: 'Redis not connected'
+    };
+  } catch (error: any) {
+    return {
+      status: 'error',
+      message: error.message
+    };
+  }
+}
+
+async function checkQueues(): Promise<HealthCheck> {
+  try {
+    const [pdfCounts, quizCounts] = await withTimeout(
+      Promise.all([
+        pdfQueue.getJobCounts(),
+        quizQueue.getJobCounts()
+      ]),
+      2000 // 2 second timeout
+    );
+
+    return {
+      status: 'ok',
+      message: 'Queues operational',
+      pdf: pdfCounts,
+      quiz: quizCounts
+    };
+  } catch (error: any) {
+    return {
+      status: 'error',
+      message: error.message
+    };
+  }
+}
+
+function getReadyStateString(state: number): string {
+  const states = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting'
+  };
+  return states[state as keyof typeof states] || 'unknown';
+}
+
+export default healthController;

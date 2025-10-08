@@ -1,62 +1,45 @@
 import { Request, Response } from 'express';
 import jobService from '../services/jobService';
-import { successResponse } from '../utils/apiResponse';
+import { respondData } from '../utils/apiResponse';
 import asyncHandler from '../utils/asyncHandler';
 import ApiError from '../utils/apiError';
+import { getParam, getQuery } from '../utils/requestHelpers';
 
-class JobController {
-  getJobStatus = asyncHandler(async (req: Request, res: Response) => {
-    const { jobId } = req.params;
-    const { queueType } = req.query;
+export const jobController = {
+  getJobStatus: asyncHandler(async (req: Request, res: Response) => {
+    const jobId = getParam(req, 'jobId');
+    const queueType = getQuery(req, 'queueType');
 
     if (!queueType) {
       throw ApiError.badRequest('Queue type is required', 'MISSING_QUEUE_TYPE');
     }
 
-    const status = await jobService.getJobStatus(jobId as string, queueType as string);
+    const status = await jobService.getJobStatus(jobId, queueType);
+    return respondData(res, { job: status }, 'Job status retrieved successfully');
+  }),
 
-    return successResponse(
-      res,
-      200,
-      'Job status retrieved successfully',
-      { job: status }
-    );
-  });
-
-  getQueueStats = asyncHandler(async (req: Request, res: Response) => {
-    const { queueType } = req.params;
+  getQueueStats: asyncHandler(async (req: Request, res: Response) => {
+    const queueType = getParam(req, 'queueType');
 
     if (!queueType) {
       throw ApiError.badRequest('Queue type is required', 'MISSING_QUEUE_TYPE');
     }
 
     const stats = await jobService.getQueueStats(queueType);
+    return respondData(res, { stats }, 'Queue statistics retrieved successfully');
+  }),
 
-    return successResponse(
-      res,
-      200,
-      'Queue statistics retrieved successfully',
-      { stats }
-    );
-  });
-
-  retryJob = asyncHandler(async (req: Request, res: Response) => {
-    const { jobId } = req.params;
+  retryJob: asyncHandler(async (req: Request, res: Response) => {
+    const jobId = getParam(req, 'jobId');
     const { queueType } = req.body;
 
     if (!queueType) {
       throw ApiError.badRequest('Queue type is required', 'MISSING_QUEUE_TYPE');
     }
 
-    const result = await jobService.retryFailedJob(jobId as string, queueType);
+    const result = await jobService.retryFailedJob(jobId, queueType);
+    return respondData(res, result, 'Job retry initiated');
+  })
+};
 
-    return successResponse(
-      res,
-      200,
-      'Job retry initiated',
-      result
-    );
-  });
-}
-
-export default new JobController();
+export default jobController;

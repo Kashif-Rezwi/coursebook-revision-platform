@@ -1,14 +1,15 @@
 import quizService from '../services/quizService';
-import { successResponse } from '../utils/apiResponse';
+import { respondCreated, respondData } from '../utils/apiResponse';
 import asyncHandler from '../utils/asyncHandler';
 import { AuthenticatedRequest } from '../types/auth';
 import { Response } from 'express';
+import { getUserId, getParam, createFilters } from '../utils/requestHelpers';
 
-class QuizController {
-  createQuiz = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+export const quizController = {
+  createQuiz: asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { pdfId, title, mcqCount, saqCount, laqCount, difficulty } = req.body as any;
 
-    const result = await quizService.createQuiz(req.user!.userId, pdfId, {
+    const result = await quizService.createQuiz(getUserId(req), pdfId, {
       title,
       mcqCount,
       saqCount,
@@ -16,54 +17,46 @@ class QuizController {
       difficulty
     });
 
-    return successResponse(res, 201, 'Quiz created and generation started', result);
-  });
+    return respondCreated(res, result, 'Quiz created and generation started');
+  }),
 
-  getUserQuizzes = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const filters = {
-      pdfId: req.query['pdfId'] as string | undefined,
-      status: req.query['status'] as string | undefined,
-      limit: req.query['limit'] as string | undefined,
-      skip: req.query['skip'] as string | undefined,
-      sortBy: req.query['sortBy'] as string | undefined
-    };
+  getUserQuizzes: asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const filters = createFilters(req);
+    const result = await quizService.getUserQuizzes(getUserId(req), filters);
+    return respondData(res, result, 'Quizzes retrieved successfully');
+  }),
 
-    const result = await quizService.getUserQuizzes(req.user!.userId, filters);
+  getQuiz: asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const quizId = getParam(req, 'quizId');
+    const quiz = await quizService.getQuizById(quizId, getUserId(req), false);
+    return respondData(res, { quiz }, 'Quiz retrieved successfully');
+  }),
 
-    return successResponse(res, 200, 'Quizzes retrieved successfully', result);
-  });
-
-  getQuiz = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const quizId = String(req.params['quizId']);
-    const quiz = await quizService.getQuizById(quizId, req.user!.userId, false);
-    return successResponse(res, 200, 'Quiz retrieved successfully', { quiz });
-  });
-
-  submitQuiz = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  submitQuiz: asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { answers, timeTaken } = req.body as any;
-    const quizId = String(req.params['quizId']);
+    const quizId = getParam(req, 'quizId');
 
     const attempt = await quizService.submitQuizAttempt(
       quizId,
-      req.user!.userId,
+      getUserId(req),
       answers,
       timeTaken
     );
 
-    return successResponse(res, 200, 'Quiz submitted successfully', { attempt });
-  });
+    return respondData(res, { attempt }, 'Quiz submitted successfully');
+  }),
 
-  getQuizAttempts = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const quizId = String(req.params['quizId']);
-    const attempts = await quizService.getQuizAttempts(quizId, req.user!.userId);
-    return successResponse(res, 200, 'Quiz attempts retrieved successfully', { attempts });
-  });
+  getQuizAttempts: asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const quizId = getParam(req, 'quizId');
+    const attempts = await quizService.getQuizAttempts(quizId, getUserId(req));
+    return respondData(res, { attempts }, 'Quiz attempts retrieved successfully');
+  }),
 
-  deleteQuiz = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const quizId = String(req.params['quizId']);
-    const result = await quizService.deleteQuiz(quizId, req.user!.userId);
-    return successResponse(res, 200, 'Quiz deleted successfully', result);
-  });
-}
+  deleteQuiz: asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const quizId = getParam(req, 'quizId');
+    const result = await quizService.deleteQuiz(quizId, getUserId(req));
+    return respondData(res, result, 'Quiz deleted successfully');
+  })
+};
 
-export default new QuizController();
+export default quizController;
