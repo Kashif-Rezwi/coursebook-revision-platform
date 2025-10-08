@@ -5,8 +5,15 @@ import { TIMEOUTS } from './timeouts';
 
 const options = {
   maxPoolSize: 10,
+  minPoolSize: 2,
+  maxIdleTimeMS: 30000,
   serverSelectionTimeoutMS: TIMEOUTS.DATABASE_SELECTION,
   socketTimeoutMS: TIMEOUTS.DATABASE_SOCKET,
+  connectTimeoutMS: 10000,
+  bufferMaxEntries: 0,
+  bufferCommands: false,
+  retryWrites: true,
+  retryReads: true,
 };
 
 /**

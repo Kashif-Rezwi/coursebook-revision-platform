@@ -25,9 +25,11 @@ class PDFService {
    * Upload PDF file and create processing job
    */
   async upload(file: Express.Multer.File, userId: string): Promise<{pdf: any, jobId: string}> {
+    let pdf: any = null;
+    
     try {
       // Create PDF document
-      const pdf = await PDF.create({
+      pdf = await PDF.create({
         userId,
         filename: file.filename,
         originalName: file.originalname,
@@ -47,8 +49,9 @@ class PDFService {
         fileSize: file.size
       });
 
-      // Update PDF with job ID
+      // Update PDF with job ID and status
       pdf.status = 'processing';
+      pdf.jobId = job.id;
       await pdf.save();
 
       logger.info('Service: upload - PDF processing job created', { 
@@ -58,11 +61,14 @@ class PDFService {
       });
 
       return {
-        pdf,
+        pdf: pdf,
         jobId: String(job.id)
       };
     } catch (error) {
-      // Cleanup file if PDF creation failed
+      // Cleanup on failure
+      if (pdf) {
+        await PDF.findByIdAndDelete(pdf._id);
+      }
       if (file && file.path) {
         deleteFile(file.path);
       }

@@ -3,6 +3,7 @@ import { chromaHelper } from '../utils/chromaHelper';
 import { extractCitations } from '../utils/citationExtractor';
 import { PDF } from '../models';
 import { logger } from '../utils/logger';
+import { ApiError } from '../utils/apiError';
 import { ContextChunk, ChatMessage, RAGOptions, RAGResult } from '../types/chat';
 import CacheService from './CacheService';
 import { AI_LIMITS, CACHE_TTL } from '../utils/constants';
@@ -87,7 +88,7 @@ class RAGService {
       }
     } catch (error) {
       logger.error('Service error in processQuery', error);
-      throw new Error('Failed to process query');
+      throw ApiError.internal('Failed to process query', 'RAG_PROCESS_ERROR');
     }
   }
 
@@ -109,7 +110,7 @@ class RAGService {
       return this.convertToContextChunks(results);
     } catch (error) {
       logger.error('Service error in retrieveContext', error);
-      throw new Error('Failed to retrieve context');
+      throw ApiError.internal('Failed to retrieve context', 'RAG_CONTEXT_ERROR');
     }
   }
 

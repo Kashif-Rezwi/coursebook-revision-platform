@@ -1,5 +1,6 @@
 import config from '../config/env';
 import { logger } from '../utils/logger';
+import { ApiError } from '../utils/apiError';
 import { ContextChunk, ChatMessage, GenerationOptions, MAX_CHAT_HISTORY } from '../types/chat';
 import SharedHttpClient from './httpClient';
 import { huggingFaceCircuitBreaker } from '../utils/circuitBreaker';
@@ -117,9 +118,9 @@ class AIService {
    * @returns Embedding vector as number array
    */
   async generateEmbedding(text: string): Promise<number[]> {
-    if (!text || text.trim().length === 0) {
-      throw new Error('Text cannot be empty');
-    }
+      if (!text || text.trim().length === 0) {
+        throw ApiError.badRequest('Text cannot be empty', 'EMPTY_TEXT_ERROR');
+      }
 
     return huggingFaceCircuitBreaker.execute(async () => {
       const client = SharedHttpClient.getInstance();
@@ -132,7 +133,7 @@ class AIService {
       const embedding = Array.isArray(response) ? response : (response as any)[0];
       
       if (!Array.isArray(embedding)) {
-        throw new Error('Invalid embedding response format');
+        throw ApiError.internal('Invalid embedding response format', 'EMBEDDING_FORMAT_ERROR');
       }
 
       logger.info('Service: generateEmbedding - Generated embedding', { 

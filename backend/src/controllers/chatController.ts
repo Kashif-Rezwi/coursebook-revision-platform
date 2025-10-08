@@ -105,7 +105,8 @@ export const chatController = {
         res.end();
       } catch (error) {
         logger.error('Streaming error:', error);
-        res.write(`data: ${JSON.stringify({ error: (error as Error).message })}\n\n`);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown streaming error';
+        res.write(`data: ${JSON.stringify({ error: errorMessage })}\n\n`);
         res.end();
       }
 

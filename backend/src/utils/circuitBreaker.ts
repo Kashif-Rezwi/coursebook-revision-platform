@@ -1,4 +1,5 @@
 import { logger } from './logger';
+import { ApiError } from './apiError';
 import { TIMEOUTS } from '../config/timeouts';
 
 /**
@@ -27,7 +28,7 @@ export class CircuitBreaker {
         this.state = 'HALF_OPEN';
         logger.info(`Circuit breaker for ${operation} moved to HALF_OPEN state`);
       } else {
-        throw new Error(`Circuit breaker is OPEN for ${operation}. Service temporarily unavailable.`);
+        throw ApiError.internal(`Circuit breaker is OPEN for ${operation}. Service temporarily unavailable.`, 'CIRCUIT_BREAKER_OPEN');
       }
     }
 

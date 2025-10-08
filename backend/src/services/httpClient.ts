@@ -2,6 +2,7 @@ import { HfInference } from '@huggingface/inference';
 import config from '../config/env';
 import { TIMEOUTS } from '../config/timeouts';
 import { logger } from '../utils/logger';
+import { ApiError } from '../utils/apiError';
 
 /**
  * Shared HTTP client for all AI service integrations
@@ -17,7 +18,7 @@ class SharedHttpClient {
   static getInstance(): HfInference {
     if (!this.instance) {
       if (!config.ai.apiKey) {
-        throw new Error('AI API key not configured. Please set HUGGINGFACE_API_KEY or LLM_API_KEY environment variable.');
+        throw ApiError.internal('AI API key not configured. Please set HUGGINGFACE_API_KEY or LLM_API_KEY environment variable.', 'MISSING_API_KEY');
       }
 
       try {
@@ -36,7 +37,7 @@ class SharedHttpClient {
         logger.info('Service: initialize - Shared HTTP client initialized with optimizations');
       } catch (error) {
         logger.error('Failed to initialize shared HTTP client', error);
-        throw new Error('Failed to initialize AI client');
+        throw ApiError.internal('Failed to initialize AI client', 'CLIENT_INIT_ERROR');
       }
     }
     return this.instance;
