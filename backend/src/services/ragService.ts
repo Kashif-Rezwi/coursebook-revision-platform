@@ -3,9 +3,9 @@ import { chromaHelper } from '../utils/chromaHelper';
 import { extractCitations } from '../utils/citationExtractor';
 import { PDF } from '../models';
 import { logger } from '../utils/logger';
-import { ApiError } from '../utils/apiError';
 import { ContextChunk, ChatMessage, RAGOptions, RAGResult } from '../types/chat';
 import CacheService from './CacheService';
+import { AI_LIMITS, CACHE_TTL } from '../utils/constants';
 
 /**
  * RAG Service for implementing Retrieval-Augmented Generation pipeline
@@ -27,15 +27,22 @@ class RAGService {
     options: RAGOptions = {}
   ): Promise<RAGResult> {
     try {
-      const { streaming = false, contextLimit = 5 } = options;
+      const { streaming = false, contextLimit = AI_LIMITS.DEFAULT_CONTEXT_LIMIT } = options;
 
-      logger.info(`Processing RAG query: "${query.substring(0, 50)}..."`);
+      logger.info('Service: processQuery - Processing RAG query', { 
+        queryLength: query.length,
+        pdfIds: pdfIds?.length || 0,
+        contextLimit 
+      });
 
       // Step 1: Retrieve context
       const contextChunks = await this.retrieveContext(query, pdfIds, contextLimit);
 
       if (contextChunks.length === 0) {
-        logger.warn('No relevant context found for query');
+        logger.warn('Service: processQuery - No relevant context found', { 
+          queryLength: query.length,
+          pdfIds: pdfIds?.length || 0 
+        });
         return {
           answer: "I couldn't find relevant information in the uploaded PDFs to answer your question. Please make sure the PDFs contain information related to your query.",
           citations: [],
@@ -43,7 +50,9 @@ class RAGService {
         };
       }
 
-      logger.info(`Retrieved ${contextChunks.length} context chunks`);
+      logger.info('Service: processQuery - Context chunks retrieved', { 
+        contextChunksCount: contextChunks.length 
+      });
 
       // Step 2: Enrich context with page numbers
       const enrichedContext = await this.enrichContextWithPageNumbers(contextChunks, pdfIds);
@@ -65,7 +74,10 @@ class RAGService {
         // Step 5: Extract citations
         const citations = extractCitations(answer, enrichedContext);
 
-        logger.info(`RAG query processed successfully with ${citations.length} citations`);
+        logger.info('Service: processQuery - RAG query processed successfully', { 
+          citationsCount: citations.length,
+          answerLength: answer.length 
+        });
 
         return {
           answer,
@@ -74,8 +86,8 @@ class RAGService {
         };
       }
     } catch (error) {
-      logger.error('RAG processing failed:', error);
-      throw error;
+      logger.error('Service error in processQuery', error);
+      throw new Error('Failed to process query');
     }
   }
 
@@ -86,7 +98,7 @@ class RAGService {
    * @param limit - Maximum number of chunks to retrieve
    * @returns Array of context chunks
    */
-  async retrieveContext(query: string, pdfIds: string[] | null, limit: number = 5): Promise<ContextChunk[]> {
+  async retrieveContext(query: string, pdfIds: string[] | null, limit: number = AI_LIMITS.DEFAULT_CONTEXT_LIMIT): Promise<ContextChunk[]> {
     try {
       // Generate query embedding
       const queryEmbedding = await aiService.generateEmbedding(query);
@@ -96,8 +108,8 @@ class RAGService {
 
       return this.convertToContextChunks(results);
     } catch (error) {
-      logger.error('Context retrieval failed:', error);
-      throw ApiError.internal('Failed to retrieve context', 'CONTEXT_RETRIEVAL_ERROR');
+      logger.error('Service error in retrieveContext', error);
+      throw new Error('Failed to retrieve context');
     }
   }
 
@@ -146,7 +158,7 @@ class RAGService {
             const pdfId = (pdf._id as any).toString();
             pdfMap[pdfId] = pdf;
             // Cache for 1 hour
-            CacheService.set(`pdf:${pdfId}`, pdf, 3600 * 1000);
+            CacheService.set(`pdf:${pdfId}`, pdf, CACHE_TTL.VERY_LONG);
           });
         }
       }
@@ -176,7 +188,7 @@ class RAGService {
 
       return enrichedChunks;
     } catch (error) {
-      logger.error('Context enrichment failed:', error);
+      logger.error('Context enrichment failed', error);
       // Return chunks without page numbers if enrichment fails
       return chunks;
     }

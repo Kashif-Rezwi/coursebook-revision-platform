@@ -9,7 +9,7 @@ import requestId from './middlewares/requestId';
 import requestLogger from './middlewares/requestLogger';
 import swaggerSpec from './docs/swagger';
 import apiRoutes from './routes';
-// import { successResponse } from './utils/apiResponse';
+
 
 const app: Application = express();
 

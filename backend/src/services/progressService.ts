@@ -25,6 +25,7 @@ import { IQuizAttempt } from '../models/QuizAttempt';
 import { ApiError } from '../utils/apiError';
 import { logger } from '../utils/logger';
 import CacheService from './CacheService';
+import { CACHE_TTL, PAGINATION } from '../utils/constants';
 
 export interface DashboardData {
   overallStats: OverallStats;
@@ -102,7 +103,7 @@ class ProgressService {
       // Check cache first
       const cachedData = CacheService.get<DashboardData>(cacheKey);
       if (cachedData) {
-        logger.info(`Dashboard data served from cache for user ${userId}`);
+        logger.info('Cache: hit', { cacheKey, userId });
         return cachedData;
       }
 
@@ -112,7 +113,7 @@ class ProgressService {
       if (!progress) {
         // Create empty progress if doesn't exist
         progress = await Progress.create({ userId });
-        logger.info(`Created new progress document for user ${userId}`);
+        logger.info('Database: create Progress', { userId });
       }
 
       // Get recent quiz attempts for trend analysis
@@ -143,24 +144,25 @@ class ProgressService {
       };
 
       // Cache the result for 2 minutes
-      CacheService.set(cacheKey, dashboardData, 2 * 60 * 1000);
+      CacheService.set(cacheKey, dashboardData, CACHE_TTL.SHORT);
+      logger.info('Cache: set', { cacheKey, userId, ttl: '2m' });
 
-      logger.info(`Dashboard data retrieved for user ${userId}`);
+      logger.info('Service: getDashboard - Dashboard data retrieved', { userId });
       return dashboardData;
     } catch (error) {
-      logger.error('Failed to get dashboard:', error);
+      logger.error('Service error in getDashboard', error);
       throw ApiError.internal('Failed to retrieve dashboard data', 'DASHBOARD_ERROR');
     }
   }
 
   async getOverallStats(userId: string): Promise<OverallStats> {
     try {
-      const cacheKey = `stats:${userId}`;
+      const cacheKey = `progress:${userId}`;
       
       // Check cache first
       const cachedStats = CacheService.get<OverallStats>(cacheKey);
       if (cachedStats) {
-        logger.info(`Overall stats served from cache for user ${userId}`);
+        logger.info('Cache: hit', { cacheKey, userId });
         return cachedStats;
       }
 
@@ -174,13 +176,13 @@ class ProgressService {
       }
 
       // Cache the result for 5 minutes
-      CacheService.set(cacheKey, stats, 5 * 60 * 1000);
+      CacheService.set(cacheKey, stats, CACHE_TTL.MEDIUM);
 
-      logger.info(`Overall stats retrieved for user ${userId}`);
+      logger.info('Service: getOverallStats - Overall stats retrieved', { userId });
       return stats;
     } catch (error) {
-      logger.error('Failed to get overall stats:', error);
-      throw ApiError.internal('Failed to retrieve statistics', 'STATS_ERROR');
+      logger.error('Service error in getOverallStats', error);
+      throw ApiError.internal('Failed to retrieve overall stats', 'STATS_ERROR');
     }
   }
 
@@ -213,8 +215,8 @@ class ProgressService {
         analytics
       };
     } catch (error) {
-      logger.error('Failed to get topic performance:', error);
-      throw ApiError.internal('Failed to retrieve topic performance', 'TOPIC_ERROR');
+      logger.error('Service error in getTopicPerformance', error);
+      throw ApiError.internal('Failed to retrieve topic performance', 'TOPIC_PERFORMANCE_ERROR');
     }
   }
 
@@ -228,8 +230,8 @@ class ProgressService {
 
       return progress.recentActivity.slice(0, limit);
     } catch (error) {
-      logger.error('Failed to get recent activity:', error);
-      throw ApiError.internal('Failed to retrieve activity', 'ACTIVITY_ERROR');
+      logger.error('Service error in getRecentActivity', error);
+      throw ApiError.internal('Failed to retrieve recent activity', 'RECENT_ACTIVITY_ERROR');
     }
   }
 
@@ -240,7 +242,7 @@ class ProgressService {
       }
       
       const {
-        limit = 50,
+        limit = PAGINATION.DEFAULT_LIMIT,
         skip = 0,
         sortBy = '-completedAt',
         fromDate,
@@ -277,7 +279,10 @@ class ProgressService {
       // Group by date for visualization
       const groupedByDate = groupAttemptsByDate(attempts);
 
-      logger.info(`Quiz history retrieved for user ${userId}: ${attempts.length} attempts`);
+      logger.info('Service: getQuizHistory - Quiz history retrieved', { 
+        userId, 
+        attemptsCount: attempts.length 
+      });
 
       return {
         attempts,
@@ -287,7 +292,7 @@ class ProgressService {
         groupedByDate
       };
     } catch (error) {
-      logger.error('Failed to get quiz history:', error);
+      logger.error('Service error in getQuizHistory', error);
       throw ApiError.internal('Failed to retrieve quiz history', 'QUIZ_HISTORY_ERROR');
     }
   }
@@ -318,8 +323,8 @@ class ProgressService {
         totalAttempts: attempts.length
       };
     } catch (error) {
-      logger.error('Failed to get performance trend:', error);
-      throw ApiError.internal('Failed to retrieve performance trend', 'TREND_ERROR');
+      logger.error('Service error in getPerformanceTrend', error);
+      throw ApiError.internal('Failed to retrieve performance trend', 'PERFORMANCE_TREND_ERROR');
     }
   }
 
@@ -349,7 +354,7 @@ class ProgressService {
         recommendations
       };
     } catch (error) {
-      logger.error('Failed to get weak topics:', error);
+      logger.error('Service error in getWeakTopics', error);
       throw ApiError.internal('Failed to retrieve weak topics', 'WEAK_TOPICS_ERROR');
     }
   }
@@ -395,21 +400,21 @@ class ProgressService {
         }
       };
     } catch (error) {
-      logger.error('Failed to export progress data:', error);
-      throw error;
+      logger.error('Service error in exportProgressData', error);
+      throw ApiError.internal('Failed to export progress data', 'EXPORT_ERROR');
     }
   }
 
   // Method to clear cache when progress is updated
   clearUserCache(userId: string): void {
     CacheService.clearPattern(userId);
-    logger.info(`Cache cleared for user ${userId}`);
+    logger.info('Cache: delete', { cacheKey: `progress:${userId}`, userId });
   }
 
   // Method to clear all cache (useful for testing or maintenance)
   clearAllCache(): void {
     CacheService.clear();
-    logger.info('All progress cache cleared');
+    logger.info('Service: clearAllCache - All progress cache cleared');
   }
 }
 

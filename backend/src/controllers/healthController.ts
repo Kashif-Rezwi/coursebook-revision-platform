@@ -7,6 +7,7 @@ import { success } from '../utils/apiResponse';
 import { asyncHandler } from '../utils/asyncHandler';
 import { getSystemInfo } from '../utils/systemInfo';
 import aiService from '../services/aiService';
+import { TIMEOUTS } from '../config/timeouts';
 
 /**
  * Utility function to add timeout to promises
@@ -91,7 +92,7 @@ async function checkDatabase(): Promise<HealthCheck> {
     if (state === 1) {
       await withTimeout(
         (mongoose.connection.db?.admin().ping() || Promise.resolve()) as Promise<void>,
-        5000 // 5 second timeout
+        TIMEOUTS.HEALTH_CHECK
       );
       return {
         status: 'ok',
@@ -117,7 +118,7 @@ async function checkChromaDB(): Promise<HealthCheck> {
   try {
     const collection = await withTimeout(
       getCollection(),
-      3000 // 3 second timeout
+      TIMEOUTS.HEALTH_CHECK
     );
     if (collection) {
       return {
@@ -166,7 +167,7 @@ async function checkQueues(): Promise<HealthCheck> {
         pdfQueue.getJobCounts(),
         quizQueue.getJobCounts()
       ]),
-      2000 // 2 second timeout
+      TIMEOUTS.HEALTH_CHECK
     );
 
     return {

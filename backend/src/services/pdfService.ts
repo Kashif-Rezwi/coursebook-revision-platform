@@ -37,7 +37,7 @@ class PDFService {
         status: 'uploading'
       });
 
-      logger.info(`PDF uploaded: ${pdf._id} by user ${userId}`);
+      logger.info('Service: upload - PDF uploaded', { userId, pdfId: (pdf._id as any).toString() });
 
       // Add to processing queue
       const job = await addPDFProcessingJob({
@@ -51,20 +51,23 @@ class PDFService {
       pdf.status = 'processing';
       await pdf.save();
 
-      logger.info(`PDF processing job created: ${job.id} for PDF ${pdf._id}`);
+      logger.info('Service: upload - PDF processing job created', { 
+        userId, 
+        pdfId: (pdf._id as any).toString(), 
+        jobId: job.id 
+      });
 
       return {
         pdf,
         jobId: String(job.id)
       };
     } catch (error) {
-      logger.error('PDF upload failed:', error as any);
-      
       // Cleanup file if PDF creation failed
       if (file && file.path) {
         deleteFile(file.path);
       }
       
+      logger.error('Service error in upload', error);
       throw ApiError.internal('Failed to upload PDF', 'PDF_UPLOAD_ERROR');
     }
   }
@@ -137,15 +140,15 @@ class PDFService {
       // Delete PDF document
       await PDF.findByIdAndDelete(pdfId);
 
-      logger.info(`PDF deleted: ${pdfId} by user ${userId}`);
+      logger.info('Service: remove - PDF deleted', { userId, pdfId });
 
       return {
         message: 'PDF deleted successfully',
         id: pdfId
       };
     } catch (error) {
-      logger.error('PDF deletion failed:', error as any);
-      throw error;
+      logger.error('Service error in remove', error);
+      throw ApiError.internal('Failed to remove PDF', 'PDF_REMOVE_ERROR');
     }
   }
 
@@ -169,11 +172,11 @@ class PDFService {
         throw ApiError.notFound('PDF not found', 'PDF_NOT_FOUND');
       }
 
-      logger.info(`PDF ${pdfId} status updated to ${status}`);
+      logger.info('Service: updateStatus - PDF status updated', { pdfId, status });
       return pdf;
     } catch (error) {
-      logger.error('PDF status update failed:', error as any);
-      throw error;
+      logger.error('Service error in updateStatus', error);
+      throw ApiError.internal('Failed to update PDF status', 'PDF_STATUS_UPDATE_ERROR');
     }
   }
 

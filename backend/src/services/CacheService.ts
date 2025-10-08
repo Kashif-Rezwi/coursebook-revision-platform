@@ -1,4 +1,5 @@
 import { logger } from '../utils/logger';
+import { CACHE_TTL } from '../utils/constants';
 
 interface CacheEntry<T> {
   data: T;
@@ -12,7 +13,7 @@ interface CacheEntry<T> {
  */
 class CacheService {
   private cache = new Map<string, CacheEntry<any>>();
-  private readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
+  private readonly DEFAULT_TTL = CACHE_TTL.MEDIUM;
 
   /**
    * Set cache entry
@@ -53,7 +54,7 @@ class CacheService {
    */
   clear(): void {
     this.cache.clear();
-    logger.info('Cache cleared');
+    logger.info('Service: clear - Cache cleared');
   }
 
   /**
@@ -64,7 +65,10 @@ class CacheService {
       key.includes(pattern)
     );
     keysToDelete.forEach(key => this.cache.delete(key));
-    logger.info(`Cleared ${keysToDelete.length} cache entries matching pattern: ${pattern}`);
+    logger.info('Service: clearPattern - Cache entries cleared', { 
+      pattern, 
+      clearedCount: keysToDelete.length 
+    });
   }
 
   /**
@@ -92,7 +96,9 @@ class CacheService {
     }
 
     if (cleaned > 0) {
-      logger.info(`Cleaned ${cleaned} expired cache entries`);
+      logger.info('Service: cleanExpired - Expired cache entries cleaned', { 
+        cleanedCount: cleaned 
+      });
     }
 
     return cleaned;

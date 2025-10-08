@@ -33,10 +33,13 @@ class EvaluationService {
       const evaluation = this.parseEvaluationResponse(response);
       evaluation.score = Math.min(Math.max(evaluation.score, 0), points);
       evaluation.pointsEarned = evaluation.score;
-      logger.info(`SAQ evaluated: ${evaluation.score}/${points} points`);
+      logger.info('Service: evaluateSAQ - SAQ evaluated', { 
+        score: evaluation.score, 
+        totalPoints: points 
+      });
       return evaluation;
     } catch (error) {
-      logger.error('SAQ evaluation failed:', error);
+      logger.error('SAQ evaluation failed', error);
       return this.getDefaultEvaluationResult();
     }
   }
@@ -48,10 +51,13 @@ class EvaluationService {
       const evaluation = this.parseEvaluationResponse(response);
       evaluation.score = Math.min(Math.max(evaluation.score, 0), points);
       evaluation.pointsEarned = evaluation.score;
-      logger.info(`LAQ evaluated: ${evaluation.score}/${points} points`);
+      logger.info('Service: evaluateLAQ - LAQ evaluated', { 
+        score: evaluation.score, 
+        totalPoints: points 
+      });
       return evaluation;
     } catch (error) {
-      logger.error('LAQ evaluation failed:', error);
+      logger.error('LAQ evaluation failed', error);
       return this.getDefaultEvaluationResult();
     }
   }
@@ -79,7 +85,7 @@ class EvaluationService {
       }
       throw new Error('No JSON found in response');
     } catch (error) {
-      logger.error('Failed to parse evaluation response:', error);
+      logger.error('Failed to parse evaluation response', error);
       return {
         score: 0,
         isCorrect: false,

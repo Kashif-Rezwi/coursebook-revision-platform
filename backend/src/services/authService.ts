@@ -65,7 +65,7 @@ class AuthService {
       }]
     });
 
-    logger.info(`New user registered: ${email}`);
+    logger.info('Service: register - New user registered', { email });
 
     // Generate token for immediate login
     const token = generateAccessToken({
@@ -110,7 +110,7 @@ class AuthService {
       role: user.role
     });
 
-    logger.info(`User logged in: ${email}`);
+    logger.info('Service: login - User logged in', { email });
 
     // Convert to UserResponse
     const userResponse = this.toUserResponse(user);
@@ -163,7 +163,7 @@ class AuthService {
       throw ApiError.notFound('User not found', 'USER_NOT_FOUND');
     }
 
-    logger.info(`User profile updated: ${user.email}`);
+    logger.info('Service: updateProfile - User profile updated', { email: user.email });
 
     return this.toUserResponse(user);
   }

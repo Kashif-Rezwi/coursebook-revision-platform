@@ -3,6 +3,7 @@ import { logger } from '../utils/logger';
 import { ContextChunk, ChatMessage, GenerationOptions, MAX_CHAT_HISTORY } from '../types/chat';
 import SharedHttpClient from './httpClient';
 import { huggingFaceCircuitBreaker } from '../utils/circuitBreaker';
+import { AI_LIMITS } from '../utils/constants';
 
 /**
  * Unified AI Service for all Hugging Face API operations
@@ -27,15 +28,18 @@ class AIService {
     };
 
     if (!config.ai.apiKey) {
-      logger.warn('AI API key not configured');
+      logger.error('AI API key not configured');
       return;
     }
 
     try {
       SharedHttpClient.getInstance(); // Initialize shared client
-      logger.info(`AI Service initialized - Text: ${this.textModel}, Embeddings: ${this.embeddingModel}`);
+      logger.info('Service: initialize - AI Service initialized', { 
+        textModel: this.textModel, 
+        embeddingModel: this.embeddingModel 
+      });
     } catch (error) {
-      logger.warn('AI service initialized without client');
+      logger.error('AI service initialized without client', error);
     }
   }
 
@@ -64,7 +68,9 @@ class AIService {
         }
       });
 
-      logger.debug(`Text generated (${response.generated_text.length} chars)`);
+      logger.info('Service: generateText - Text generated', { 
+        textLength: response.generated_text.length 
+      });
       return response.generated_text.trim();
     }, 'text generation');
   }
@@ -100,7 +106,7 @@ class AIService {
         }
       }
     } catch (error) {
-      logger.error('Streaming text generation failed:', error);
+        logger.error('Streaming text generation failed', error);
       throw error;
     }
   }
@@ -129,7 +135,9 @@ class AIService {
         throw new Error('Invalid embedding response format');
       }
 
-      logger.debug(`Generated embedding for text (${text.length} chars)`);
+      logger.info('Service: generateEmbedding - Generated embedding', { 
+        textLength: text.length 
+      });
       return embedding as number[];
     }, 'embedding generation');
   }
@@ -161,7 +169,9 @@ class AIService {
       // Convert to number array
       const embeddings = Array.isArray(response) ? response : [response as any];
       
-      logger.info(`Generated ${embeddings.length} embeddings in batch`);
+      logger.info('Service: generateEmbeddings - Generated embeddings in batch', { 
+        count: embeddings.length 
+      });
       return embeddings as number[][];
     }, 'batch embedding generation');
   }
@@ -233,7 +243,7 @@ Answer:`;
     }
 
     // Process in batches to avoid overwhelming the API
-    const batchSize = 5;
+    const batchSize = AI_LIMITS.MAX_BATCH_SIZE;
     const results: string[] = [];
 
     for (let i = 0; i < prompts.length; i += batchSize) {
@@ -244,7 +254,7 @@ Answer:`;
         const batchResults = await Promise.all(batchPromises);
         results.push(...batchResults);
       } catch (error) {
-        logger.error(`Batch ${Math.floor(i / batchSize) + 1} failed:`, error);
+        logger.error(`Batch ${Math.floor(i / batchSize) + 1} failed`, error);
         // Add empty strings for failed batch
         results.push(...new Array(batch.length).fill(''));
       }
@@ -280,7 +290,7 @@ Answer:`;
       await this.generateText('Hello, this is a test.');
       results.textGeneration = true;
     } catch (error) {
-      logger.warn('Text generation test failed:', error);
+      logger.error('Text generation test failed', error);
     }
 
     try {
@@ -288,7 +298,7 @@ Answer:`;
       await this.generateEmbedding('This is a test sentence.');
       results.embeddings = true;
     } catch (error) {
-      logger.warn('Embedding test failed:', error);
+      logger.error('Embedding test failed', error);
     }
 
     return results;

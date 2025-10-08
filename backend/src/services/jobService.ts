@@ -77,7 +77,7 @@ class JobService {
     }
 
     await job.retry();
-    logger.info(`Job ${jobId} retried in ${queueType} queue`);
+    logger.info('Service: retryFailedJob - Job retried', { jobId, queueType });
 
     return {
       message: 'Job retried successfully',
@@ -93,7 +93,11 @@ class JobService {
     const result = await queue.clean(grace, 'completed');
     const failedResult = await queue.clean(grace, 'failed');
 
-    logger.info(`Cleaned ${queueType} queue: ${result.length} completed, ${failedResult.length} failed`);
+    logger.info('Service: cleanQueue - Queue cleaned', { 
+      queueType, 
+      completedCount: result.length, 
+      failedCount: failedResult.length 
+    });
 
     return {
       queueType,

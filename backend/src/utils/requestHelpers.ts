@@ -4,17 +4,17 @@ import { AuthenticatedRequest } from '../types/auth';
 /**
  * Extract common query parameters with type conversion
  */
-export const extractQueryParams = (req: Request) => ({
-  limit: req.query['limit'] ? parseInt(req.query['limit'] as string) : undefined,
-  skip: req.query['skip'] ? parseInt(req.query['skip'] as string) : undefined,
-  sortBy: req.query['sortBy'] as string | undefined,
-  status: req.query['status'] as string | undefined,
-  pdfId: req.query['pdfId'] as string | undefined,
-  fromDate: req.query['fromDate'] as string | undefined,
-  toDate: req.query['toDate'] as string | undefined,
-  minScore: req.query['minScore'] ? parseInt(req.query['minScore'] as string) : undefined,
-  maxScore: req.query['maxScore'] ? parseInt(req.query['maxScore'] as string) : undefined
-});
+export const extractQueryParams = (req: Request) => {
+  const params: Record<string, any> = {};
+  Object.entries(req.query).forEach(([key, value]) => {
+    if (value !== undefined) {
+      // Convert numeric strings to numbers, keep others as strings
+      const numValue = Number(value);
+      params[key] = isNaN(numValue) ? value : numValue;
+    }
+  });
+  return params;
+};
 
 /**
  * Extract user ID from authenticated request

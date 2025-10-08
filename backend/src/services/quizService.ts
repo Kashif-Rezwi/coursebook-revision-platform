@@ -4,6 +4,7 @@ import evaluationService from './evaluationService';
 // Score calculation functions moved from utils/scoreCalculator
 import { ApiError } from '../utils/apiError';
 import { logger } from '../utils/logger';
+import { QUIZ_LIMITS, PAGINATION } from '../utils/constants';
 
 // Score calculation interfaces and functions
 export interface EvaluatedAnswerSummary {
@@ -125,9 +126,9 @@ class QuizService {
     try {
       const {
         title = 'New Quiz',
-        mcqCount = 5,
-        saqCount = 3,
-        laqCount = 2,
+        mcqCount = QUIZ_LIMITS.DEFAULT_MCQ,
+        saqCount = QUIZ_LIMITS.DEFAULT_SAQ,
+        laqCount = QUIZ_LIMITS.DEFAULT_LAQ,
         difficulty = 'medium'
       } = options;
 
@@ -138,7 +139,7 @@ class QuizService {
         status: 'generating'
       });
 
-      logger.info(`Quiz created: ${quiz._id} by user ${userId}`);
+      logger.info('Service: createQuiz - Quiz created', { userId, quizId: (quiz as any)._id });
 
       const job = await addQuizGenerationJob({
         quizId: String(quiz._id),
@@ -152,11 +153,15 @@ class QuizService {
         }
       });
 
-      logger.info(`Quiz generation job created: ${job.id} for quiz ${(quiz as any)._id}`);
+      logger.info('Service: createQuiz - Quiz generation job created', { 
+        userId, 
+        quizId: (quiz as any)._id, 
+        jobId: job.id 
+      });
 
       return { quiz, jobId: String(job.id) };
     } catch (error) {
-      logger.error('Quiz creation failed:', error);
+      logger.error('Service error in createQuiz', error);
       throw ApiError.internal('Failed to create quiz', 'QUIZ_CREATE_ERROR');
     }
   }
@@ -165,7 +170,7 @@ class QuizService {
    * Get user's quizzes with filtering
    */
   async getUserQuizzes(userId: string, filters: QuizFilters = {}): Promise<any> {
-    const { pdfId, status, limit = 50, skip = 0, sortBy = '-createdAt', ...otherFilters } = filters;
+    const { pdfId, status, limit = PAGINATION.DEFAULT_LIMIT, skip = 0, sortBy = '-createdAt', ...otherFilters } = filters;
     
     const queryFilters: any = { ...otherFilters };
     if (pdfId) queryFilters.pdfId = pdfId;
@@ -238,7 +243,7 @@ class QuizService {
         throw ApiError.badRequest('Answer count does not match question count', 'INVALID_ANSWER_COUNT');
       }
 
-      logger.info(`Evaluating quiz attempt for quiz ${quizId}`);
+      logger.info('Service: submitAttempt - Evaluating quiz attempt', { userId, quizId });
 
       const evaluatedAnswers: any[] = [];
       for (let i = 0; i < quiz.questions.length; i++) {
@@ -272,14 +277,21 @@ class QuizService {
         timeTaken
       });
 
-      logger.info(`Quiz attempt created: ${attempt._id} - Score: ${scoreData.score}/${scoreData.totalPoints}`);
+      logger.info('Service: submitAttempt - Quiz attempt created', { 
+        userId, 
+        quizId, 
+        attemptId: attempt._id,
+        score: scoreData.score,
+        totalPoints: scoreData.totalPoints,
+        percentage: scoreData.percentage
+      });
 
       await this.updateUserProgress(userId, attempt, quiz);
 
       return attempt;
     } catch (error) {
-      logger.error('Quiz submission failed:', error);
-      throw error;
+      logger.error('Service error in submitAttempt', error);
+      throw ApiError.internal('Failed to submit quiz attempt', 'QUIZ_SUBMIT_ERROR');
     }
   }
 
@@ -309,11 +321,11 @@ class QuizService {
       // Delete all attempts for this quiz
       await QuizAttempt.deleteMany({ quizId });
 
-      logger.info(`Quiz deleted: ${quizId} by user ${userId}`);
+      logger.info('Service: deleteQuiz - Quiz deleted', { userId, quizId });
       return { message: 'Quiz deleted successfully', id: quizId };
     } catch (error) {
-      logger.error('Quiz deletion failed:', error);
-      throw error;
+      logger.error('Service error in deleteQuiz', error);
+      throw ApiError.internal('Failed to delete quiz', 'QUIZ_DELETE_ERROR');
     }
   }
 
@@ -328,9 +340,9 @@ class QuizService {
       }
 
       await this.updateAfterQuiz(progress, attempt, quiz);
-      logger.info(`Progress updated for user ${userId}`);
+      logger.info('Service: updateUserProgress - Progress updated', { userId });
     } catch (error) {
-      logger.error('Progress update failed:', error);
+      logger.error('Progress update failed', error);
     }
   }
 
@@ -406,13 +418,13 @@ class QuizService {
     // Weak topics (accuracy < 60%)
     progress.weakTopics = sortedTopics
       .filter((t: any) => t.accuracy < 60)
-      .slice(0, 5)
+      .slice(0, QUIZ_LIMITS.DEFAULT_MCQ)
       .map((t: any) => ({ topic: t.topic, accuracy: t.accuracy }));
 
     // Strong topics (accuracy >= 80%)
     progress.strongTopics = sortedTopics
       .filter((t: any) => t.accuracy >= 80)
-      .slice(-5)
+      .slice(-QUIZ_LIMITS.DEFAULT_MCQ)
       .reverse()
       .map((t: any) => ({ topic: t.topic, accuracy: t.accuracy }));
   }

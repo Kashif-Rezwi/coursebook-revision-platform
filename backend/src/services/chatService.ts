@@ -22,7 +22,7 @@ class ChatService {
       messages: []
     });
 
-    logger.info(`Chat created: ${chat._id} by user ${userId}`);
+    logger.info('Service: createChat - Chat created', { userId, chatId: chat._id });
     return chat;
   }
 
@@ -62,7 +62,7 @@ class ChatService {
     const cacheKey = `chat:${chatId}:${userId}`;
     const cachedChat = CacheService.get<IChat>(cacheKey);
     if (cachedChat) {
-      logger.debug(`Chat ${chatId} retrieved from cache`);
+      logger.info('Cache: hit', { cacheKey, userId, chatId });
       return cachedChat;
     }
 
@@ -76,7 +76,7 @@ class ChatService {
 
       // Cache the result for 30 minutes
       CacheService.set(cacheKey, chat, 1800);
-      logger.debug(`Chat ${chatId} cached`);
+      logger.info('Cache: set', { cacheKey, userId, chatId });
 
       return chat;
     } catch (error: any) {
@@ -117,15 +117,16 @@ class ChatService {
       // Invalidate cache for this chat
       const cacheKey = `chat:${chatId}:${userId}`;
       CacheService.delete(cacheKey);
-      logger.debug(`Cache invalidated for chat ${chatId}`);
+      logger.info('Cache: delete', { cacheKey, userId, chatId });
 
-      logger.info(`Message added to chat ${chatId} by ${role}`);
+      logger.info('Service: addMessage - Message added to chat', { userId, chatId, role });
       return chat;
     } catch (error: any) {
       if (error.name === 'CastError') {
         throw ApiError.badRequest('Invalid chat ID', 'INVALID_ID');
       }
-      throw error;
+      logger.error('Service error in addMessage', error);
+      throw ApiError.internal('Failed to add message', 'MESSAGE_ADD_ERROR');
     }
   }
 
@@ -144,7 +145,7 @@ class ChatService {
         throw ApiError.notFound('Chat not found', 'CHAT_NOT_FOUND');
       }
 
-      logger.info(`Chat title updated: ${chatId}`);
+      logger.info('Service: updateTitle - Chat title updated', { userId, chatId });
       return chat;
     } catch (error: any) {
       if (error.name === 'CastError') {
@@ -164,7 +165,7 @@ class ChatService {
         throw ApiError.notFound('Chat not found', 'CHAT_NOT_FOUND');
       }
 
-      logger.info(`Chat deleted: ${chatId} by user ${userId}`);
+      logger.info('Service: deleteChat - Chat deleted', { userId, chatId });
       return { message: 'Chat deleted successfully', id: chatId };
     } catch (error: any) {
       if (error.name === 'CastError') {

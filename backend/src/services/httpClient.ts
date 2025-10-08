@@ -33,9 +33,9 @@ class SharedHttpClient {
             });
           }
         });
-        logger.info('Shared HTTP client initialized with optimizations');
+        logger.info('Service: initialize - Shared HTTP client initialized with optimizations');
       } catch (error) {
-        logger.error('Failed to initialize shared HTTP client:', error);
+        logger.error('Failed to initialize shared HTTP client', error);
         throw new Error('Failed to initialize AI client');
       }
     }
@@ -66,9 +66,9 @@ class SharedHttpClient {
         // Note: HfInference doesn't expose connection cleanup methods
         // but we can reset the instance to free memory
         this.instance = null;
-        logger.info('HTTP client cleaned up successfully');
+        logger.info('Service: cleanup - HTTP client cleaned up successfully');
       } catch (error) {
-        logger.warn('Error during HTTP client cleanup:', error);
+        logger.error('Error during HTTP client cleanup', error);
       }
     }
   }
