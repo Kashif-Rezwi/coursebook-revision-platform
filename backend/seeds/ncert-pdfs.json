@@ -1,0 +1,41 @@
+[
+  {
+    "filename": "ncert-physics-class-11-chapter-1.pdf",
+    "originalName": "NCERT Physics Class 11 - Chapter 1: Physical World",
+    "filePath": "/seeds/pdfs/ncert-physics-class-11-chapter-1.pdf",
+    "fileSize": 2457600,
+    "pageCount": 15,
+    "metadata": {
+      "title": "Physical World",
+      "author": "NCERT",
+      "subject": "Physics",
+      "keywords": ["physics", "class 11", "physical world", "science"]
+    }
+  },
+  {
+    "filename": "ncert-physics-class-11-chapter-2.pdf",
+    "originalName": "NCERT Physics Class 11 - Chapter 2: Units and Measurements",
+    "filePath": "/seeds/pdfs/ncert-physics-class-11-chapter-2.pdf",
+    "fileSize": 3145728,
+    "pageCount": 20,
+    "metadata": {
+      "title": "Units and Measurements",
+      "author": "NCERT",
+      "subject": "Physics",
+      "keywords": ["physics", "class 11", "units", "measurements"]
+    }
+  },
+  {
+    "filename": "ncert-physics-class-11-chapter-3.pdf",
+    "originalName": "NCERT Physics Class 11 - Chapter 3: Motion in a Straight Line",
+    "filePath": "/seeds/pdfs/ncert-physics-class-11-chapter-3.pdf",
+    "fileSize": 2883584,
+    "pageCount": 18,
+    "metadata": {
+      "title": "Motion in a Straight Line",
+      "author": "NCERT",
+      "subject": "Physics",
+      "keywords": ["physics", "class 11", "motion", "kinematics"]
+    }
+  }
+]

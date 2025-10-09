@@ -1,0 +1,53 @@
+import * as os from 'os';
+import config from '../config/env';
+
+interface SystemInfo {
+  node: {
+    version: string;
+    env: string;
+    uptime: number;
+    memoryUsage: NodeJS.MemoryUsage;
+    cpuUsage: NodeJS.CpuUsage;
+  };
+  system: {
+    platform: string;
+    arch: string;
+    cpus: number;
+    totalMemory: number;
+    freeMemory: number;
+    hostname: string;
+    uptime: number;
+  };
+  app: {
+    name: string;
+    version: string;
+    environment: string;
+  };
+}
+
+export const getSystemInfo = async (): Promise<SystemInfo> => {
+  return {
+    node: {
+      version: process.version,
+      env: config.env,
+      uptime: process.uptime(),
+      memoryUsage: process.memoryUsage(),
+      cpuUsage: process.cpuUsage()
+    },
+    system: {
+      platform: os.platform(),
+      arch: os.arch(),
+      cpus: os.cpus().length,
+      totalMemory: os.totalmem(),
+      freeMemory: os.freemem(),
+      hostname: os.hostname(),
+      uptime: os.uptime()
+    },
+    app: {
+      name: config.app.name,
+      version: config.app.version,
+      environment: config.env
+    }
+  };
+};
+
